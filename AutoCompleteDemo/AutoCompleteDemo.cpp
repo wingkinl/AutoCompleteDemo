@@ -11,6 +11,12 @@
 #include "ChildFrm.h"
 #include "AutoCompleteDemoRichEditDoc.h"
 #include "AutoCompleteDemoRichEditView.h"
+#include "AutoCompleteDemoEditDoc.h"
+#include "AutoCompleteDemoEditView.h"
+#include "AutoCompleteDemoScintillaDoc.h"
+#include "AutoCompleteDemoScintillaView.h"
+#include "AutoCompleteDemoFormDoc.h"
+#include "AutoCompleteDemoFormView.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -22,7 +28,7 @@
 BEGIN_MESSAGE_MAP(CAutoCompleteDemoApp, CWinAppEx)
 	ON_COMMAND(ID_APP_ABOUT, &CAutoCompleteDemoApp::OnAppAbout)
 	// Standard file based document commands
-	ON_COMMAND(ID_FILE_NEW, &CWinAppEx::OnFileNew)
+	ON_COMMAND(ID_FILE_NEW, &CAutoCompleteDemoApp::OnFileNew)
 	ON_COMMAND(ID_FILE_OPEN, &CWinAppEx::OnFileOpen)
 END_MESSAGE_MAP()
 
@@ -40,6 +46,7 @@ CAutoCompleteDemoApp::CAutoCompleteDemoApp()
 #ifdef _ENABLE_SCINTILLA_BUILD
 	m_hSciDLL = nullptr;
 #endif // _ENABLE_SCINTILLA_BUILD
+	m_bDuringInit = true;
 }
 
 // The one and only CAutoCompleteDemoApp object
@@ -137,6 +144,22 @@ BOOL CAutoCompleteDemoApp::InitInstance()
 	pDocTemplate->SetContainerInfo(IDR_AutoCompleteDemTYPE_CNTR_IP);
 	AddDocTemplate(pDocTemplate);
 
+	pDocTemplate = new CMultiDocTemplate(IDR_AutoCompleteDemEditTYPE,
+		RUNTIME_CLASS(CAutoCompleteDemoEditDoc),
+		RUNTIME_CLASS(CChildFrame), // custom MDI child frame
+		RUNTIME_CLASS(CAutoCompleteDemoEditView));
+	if (!pDocTemplate)
+		return FALSE;
+	AddDocTemplate(pDocTemplate);
+
+	pDocTemplate = new CMultiDocTemplate(IDR_AutoCompleteDemFormTYPE,
+		RUNTIME_CLASS(CAutoCompleteDemoFormDoc),
+		RUNTIME_CLASS(CChildFrame), // custom MDI child frame
+		RUNTIME_CLASS(CAutoCompleteDemoFormView));
+	if (!pDocTemplate)
+		return FALSE;
+	AddDocTemplate(pDocTemplate);
+
 #ifdef _ENABLE_SCINTILLA_BUILD
 	m_hSciDLL = LoadLibraryFromApplicationDirectory(_T("SciLexer.dll"));
 	if (m_hSciDLL == nullptr)
@@ -178,6 +201,8 @@ BOOL CAutoCompleteDemoApp::InitInstance()
 	// The main window has been initialized, so show and update it
 	pMainFrame->ShowWindow(m_nCmdShow);
 	pMainFrame->UpdateWindow();
+
+	m_bDuringInit = false;
 
 	return TRUE;
 }
@@ -258,16 +283,17 @@ void CAutoCompleteDemoApp::SaveCustomState()
 
 void CAutoCompleteDemoApp::OnFileNew()
 {
-#ifdef _ENABLE_SCINTILLA_BUILD
-	for (POSITION tPos = theApp.m_pDocManager->GetFirstDocTemplatePosition(); tPos != NULL;)
+	if (m_bDuringInit)
 	{
-		CDocTemplate* ptempDocTemplate =
-			theApp.m_pDocManager->GetNextDocTemplate(tPos);
-		//this will make the view visible.
-		ptempDocTemplate->OpenDocumentFile(NULL);
+		for (POSITION tPos = theApp.m_pDocManager->GetFirstDocTemplatePosition(); tPos != NULL;)
+		{
+			CDocTemplate* ptempDocTemplate =
+				theApp.m_pDocManager->GetNextDocTemplate(tPos);
+			//this will make the view visible.
+			ptempDocTemplate->OpenDocumentFile(NULL);
+		}
 	}
-#else
-	CWinAppEx::OnFileNew();
-#endif // _ENABLE_SCINTILLA_BUILD
+	else
+		CWinAppEx::OnFileNew();
 }
 

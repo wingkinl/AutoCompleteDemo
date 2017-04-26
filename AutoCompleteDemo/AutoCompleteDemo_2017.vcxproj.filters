@@ -63,6 +63,9 @@
     <ClInclude Include="AutoCompleteDemoFormDoc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AutoCompleteListCtrl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AutoCompleteDemo.cpp">
@@ -105,6 +108,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AutoCompleteDemoFormDoc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AutoCompleteListCtrl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

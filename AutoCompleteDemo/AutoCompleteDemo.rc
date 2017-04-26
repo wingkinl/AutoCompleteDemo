@@ -77,6 +77,8 @@ IDR_MAINFRAME           ICON                    "res\\AutoCompleteDemo.ico"
 
 IDR_AutoCompleteDemTYPE ICON                    "res\\AutoCompleteDemoDoc.ico"
 
+IDR_AutoCompleteDemFormTYPE ICON                    "res\\AutoCompleteDemoDoc.ico"
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -306,6 +308,9 @@ IDD_AUTOCOMPLETEDEMOFORMVIEW DIALOGEX 0, 0, 320, 200
 STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
+    EDITTEXT        IDC_EDIT_SINGLELINE,7,7,306,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT_MULTILINE,7,27,306,70,ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_WANTRETURN | WS_VSCROLL
+    CONTROL         "",IDC_LIST1,"SysListView32",LVS_REPORT | LVS_EDITLABELS | LVS_ALIGNLEFT | WS_BORDER | WS_TABSTOP,7,106,306,87
 END
 
 
@@ -402,6 +407,12 @@ BEGIN
     IDR_MAINFRAME           "AutoCompleteDemo"
     IDR_AutoCompleteDemTYPE "\nAutoCompleteDem\nAutoCompleteDem\n\n\nAutoCompleteDemo.Document\nAutoCompleteDemo.Document"
     ID_WINDOW_MANAGER       "&Windows..."
+    IDR_AutoCompleteDemEditTYPE 
+                            "\nAutoCompleteDemEdit\nAutoCompleteDemEdit\n\n\nAutoCompleteDemo.Document\nAutoCompleteDemo.Document"
+    IDR_AutoCompleteDemScintillaTYPE 
+                            "\nAutoCompleteDemScintilla\nAutoCompleteDemScintilla\n\n\nAutoCompleteDemo.Document\nAutoCompleteDemo.Document"
+    IDR_AutoCompleteDemFormTYPE 
+                            "\nAutoCompleteDemForm\nAutoCompleteDemForm\n\n\nAutoCompleteDemo.Document\nAutoCompleteDemo.Document"
 END
 
 STRINGTABLE

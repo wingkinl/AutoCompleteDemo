@@ -18,8 +18,15 @@
 #define IDR_MAINFRAME_256               129
 #define IDR_AutoCompleteDemTYPE         130
 #define ID_WINDOW_MANAGER               131
+#define IDR_AutoCompleteDemEditTYPE     132
+#define IDR_AutoCompleteDemScintillaTYPE 133
+#define IDR_AutoCompleteDemFormTYPE     134
 #define IDS_EDIT_MENU                   306
 #define IDD_AUTOCOMPLETEDEMOFORMVIEW    310
+#define IDC_EDIT_SINGLELINE             1000
+#define IDC_EDIT2                       1001
+#define IDC_EDIT_MULTILINE              1001
+#define IDC_LIST1                       1002
 #define ID_CANCEL_EDIT_CNTR             32768
 
 // Next default values for new objects
@@ -28,7 +35,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        310
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1000
+#define _APS_NEXT_CONTROL_VALUE         1003
 #define _APS_NEXT_SYMED_VALUE           311
 #endif
 #endif

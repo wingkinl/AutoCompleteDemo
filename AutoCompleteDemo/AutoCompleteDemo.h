@@ -30,6 +30,8 @@ public:
 #ifdef _ENABLE_SCINTILLA_BUILD
 	HINSTANCE m_hSciDLL;
 #endif // _ENABLE_SCINTILLA_BUILD
+	bool	m_bDuringInit;
+
 	virtual void PreLoadState();
 	virtual void LoadCustomState();
 	virtual void SaveCustomState();
