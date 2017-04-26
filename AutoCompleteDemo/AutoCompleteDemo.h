@@ -27,11 +27,14 @@ public:
 
 // Implementation
 	BOOL  m_bHiColorIcons;
-
+#ifdef _ENABLE_SCINTILLA_BUILD
+	HINSTANCE m_hSciDLL;
+#endif // _ENABLE_SCINTILLA_BUILD
 	virtual void PreLoadState();
 	virtual void LoadCustomState();
 	virtual void SaveCustomState();
 
+	afx_msg void OnFileNew();
 	afx_msg void OnAppAbout();
 	DECLARE_MESSAGE_MAP()
 };

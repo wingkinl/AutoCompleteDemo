@@ -1,9 +1,13 @@
 #pragma once
 
-
+#ifdef _ENABLE_SCINTILLA_BUILD
+#include "QuickFindView.inl"
+#include "ScintillaWrapper\ScintillaDocView.h"
 // CAutoCompleteDemoScintillaView view
 
-class CAutoCompleteDemoScintillaView : public CView
+typedef CScintillaView	CAutoCompleteDemoScintillaViewBase;
+
+class CAutoCompleteDemoScintillaView : public CAutoCompleteDemoScintillaViewBase
 {
 	DECLARE_DYNCREATE(CAutoCompleteDemoScintillaView)
 
@@ -25,3 +29,4 @@ protected:
 };
 
 
+#endif // _ENABLE_SCINTILLA_BUILD

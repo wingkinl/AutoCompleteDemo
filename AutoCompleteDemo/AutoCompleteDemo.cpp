@@ -37,14 +37,41 @@ CAutoCompleteDemoApp::CAutoCompleteDemoApp()
 	// format for string is CompanyName.ProductName.SubProduct.VersionInformation
 	SetAppID(_T("AutoCompleteDemo.AppID.NoVersion"));
 
-	// TODO: add construction code here,
-	// Place all significant initialization in InitInstance
+#ifdef _ENABLE_SCINTILLA_BUILD
+	m_hSciDLL = nullptr;
+#endif // _ENABLE_SCINTILLA_BUILD
 }
 
 // The one and only CAutoCompleteDemoApp object
 
 CAutoCompleteDemoApp theApp;
 
+#ifdef _ENABLE_SCINTILLA_BUILD
+HMODULE LoadLibraryFromApplicationDirectory(LPCTSTR lpFileName)
+{
+	//Get the Application diretory
+	TCHAR szFullPath[_MAX_PATH];
+	szFullPath[0] = _T('\0');
+	if (GetModuleFileName(nullptr, szFullPath, _countof(szFullPath)) == 0)
+		return nullptr;
+
+	//Form the new path
+	TCHAR szDrive[_MAX_DRIVE];
+	szDrive[0] = _T('\0');
+	TCHAR szDir[_MAX_DIR];
+	szDir[0] = _T('\0');
+	_tsplitpath_s(szFullPath, szDrive, sizeof(szDrive) / sizeof(TCHAR), szDir, sizeof(szDir) / sizeof(TCHAR), nullptr, 0, nullptr, 0);
+	TCHAR szFname[_MAX_FNAME];
+	szFname[0] = _T('\0');
+	TCHAR szExt[_MAX_EXT];
+	szExt[0] = _T('\0');
+	_tsplitpath_s(lpFileName, nullptr, 0, nullptr, 0, szFname, sizeof(szFname) / sizeof(TCHAR), szExt, sizeof(szExt) / sizeof(TCHAR));
+	_tmakepath_s(szFullPath, sizeof(szFullPath) / sizeof(TCHAR), szDrive, szDir, szFname, szExt);
+
+	//Delegate to LoadLibrary    
+	return LoadLibrary(szFullPath);
+}
+#endif // _ENABLE_SCINTILLA_BUILD
 
 // CAutoCompleteDemoApp initialization
 
@@ -110,6 +137,24 @@ BOOL CAutoCompleteDemoApp::InitInstance()
 	pDocTemplate->SetContainerInfo(IDR_AutoCompleteDemTYPE_CNTR_IP);
 	AddDocTemplate(pDocTemplate);
 
+#ifdef _ENABLE_SCINTILLA_BUILD
+	m_hSciDLL = LoadLibraryFromApplicationDirectory(_T("SciLexer.dll"));
+	if (m_hSciDLL == nullptr)
+	{
+		AfxMessageBox(_T("Scintilla DLL is not installed, Please download the SciTE editor and copy the SciLexer.dll into this application's directory"));
+		return FALSE;
+	}
+
+	pDocTemplate = new CMultiDocTemplate(IDR_AutoCompleteDemTYPE,
+		RUNTIME_CLASS(CAutoCompleteDemoScintillaDoc),
+		RUNTIME_CLASS(CChildFrame), // custom MDI child frame
+		RUNTIME_CLASS(CAutoCompleteDemoScintillaView));
+	pDocTemplate->SetContainerInfo(IDR_AutoCompleteDemTYPE_CNTR_IP);
+	AddDocTemplate(pDocTemplate);
+#else
+#pragma message("scintilla-based view not enabled, put scintilla's header files to scintilla folder to enable building it.")
+#endif // _ENABLE_SCINTILLA_BUILD
+
 	// create main MDI Frame window
 	CMainFrame* pMainFrame = new CMainFrame;
 	if (!pMainFrame || !pMainFrame->LoadFrame(IDR_MAINFRAME))
@@ -141,7 +186,10 @@ int CAutoCompleteDemoApp::ExitInstance()
 {
 	//TODO: handle additional resources you may have added
 	AfxOleTerm(FALSE);
-
+#ifdef _ENABLE_SCINTILLA_BUILD
+	if (m_hSciDLL)
+		FreeLibrary(m_hSciDLL);
+#endif // _ENABLE_SCINTILLA_BUILD
 	return CWinAppEx::ExitInstance();
 }
 
@@ -208,5 +256,18 @@ void CAutoCompleteDemoApp::SaveCustomState()
 
 // CAutoCompleteDemoApp message handlers
 
-
+void CAutoCompleteDemoApp::OnFileNew()
+{
+#ifdef _ENABLE_SCINTILLA_BUILD
+	for (POSITION tPos = theApp.m_pDocManager->GetFirstDocTemplatePosition(); tPos != NULL;)
+	{
+		CDocTemplate* ptempDocTemplate =
+			theApp.m_pDocManager->GetNextDocTemplate(tPos);
+		//this will make the view visible.
+		ptempDocTemplate->OpenDocumentFile(NULL);
+	}
+#else
+	CWinAppEx::OnFileNew();
+#endif // _ENABLE_SCINTILLA_BUILD
+}
 

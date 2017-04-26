@@ -1,8 +1,12 @@
 #pragma once
 
+#ifdef _ENABLE_SCINTILLA_BUILD
+#include "ScintillaWrapper\ScintillaDocView.h"
 // CAutoCompleteDemoScintillaDoc document
 
-class CAutoCompleteDemoScintillaDoc : public CDocument
+typedef CScintillaDoc	CAutoCompleteDemoScintillaDocBase;
+
+class CAutoCompleteDemoScintillaDoc : public CAutoCompleteDemoScintillaDocBase
 {
 	DECLARE_DYNCREATE(CAutoCompleteDemoScintillaDoc)
 
@@ -24,3 +28,6 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 };
+
+
+#endif // _ENABLE_SCINTILLA_BUILD

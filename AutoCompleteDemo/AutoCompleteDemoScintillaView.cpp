@@ -2,12 +2,13 @@
 //
 
 #include "stdafx.h"
+#ifdef _ENABLE_SCINTILLA_BUILD
 #include "AutoCompleteDemoScintillaView.h"
 
 
 // CAutoCompleteDemoScintillaView
 
-IMPLEMENT_DYNCREATE(CAutoCompleteDemoScintillaView, CView)
+IMPLEMENT_DYNCREATE(CAutoCompleteDemoScintillaView, CAutoCompleteDemoScintillaViewBase)
 
 CAutoCompleteDemoScintillaView::CAutoCompleteDemoScintillaView()
 {
@@ -18,7 +19,7 @@ CAutoCompleteDemoScintillaView::~CAutoCompleteDemoScintillaView()
 {
 }
 
-BEGIN_MESSAGE_MAP(CAutoCompleteDemoScintillaView, CView)
+BEGIN_MESSAGE_MAP(CAutoCompleteDemoScintillaView, CAutoCompleteDemoScintillaViewBase)
 END_MESSAGE_MAP()
 
 
@@ -36,16 +37,21 @@ void CAutoCompleteDemoScintillaView::OnDraw(CDC* pDC)
 #ifdef _DEBUG
 void CAutoCompleteDemoScintillaView::AssertValid() const
 {
-	CView::AssertValid();
+	CAutoCompleteDemoScintillaViewBase::AssertValid();
 }
 
 #ifndef _WIN32_WCE
 void CAutoCompleteDemoScintillaView::Dump(CDumpContext& dc) const
 {
-	CView::Dump(dc);
+	CAutoCompleteDemoScintillaViewBase::Dump(dc);
 }
 #endif
 #endif //_DEBUG
 
 
 // CAutoCompleteDemoScintillaView message handlers
+
+
+#endif // _ENABLE_SCINTILLA_BUILD
+// THE END OF FILE
+//////////////////////////////////////////////////////////////////////////

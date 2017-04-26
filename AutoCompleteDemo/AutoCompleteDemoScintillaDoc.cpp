@@ -2,12 +2,13 @@
 //
 
 #include "stdafx.h"
+#ifdef _ENABLE_SCINTILLA_BUILD
 #include "AutoCompleteDemoScintillaDoc.h"
 
 
 // CAutoCompleteDemoScintillaDoc
 
-IMPLEMENT_DYNCREATE(CAutoCompleteDemoScintillaDoc, CDocument)
+IMPLEMENT_DYNCREATE(CAutoCompleteDemoScintillaDoc, CAutoCompleteDemoScintillaDocBase)
 
 CAutoCompleteDemoScintillaDoc::CAutoCompleteDemoScintillaDoc()
 {
@@ -15,7 +16,7 @@ CAutoCompleteDemoScintillaDoc::CAutoCompleteDemoScintillaDoc()
 
 BOOL CAutoCompleteDemoScintillaDoc::OnNewDocument()
 {
-	if (!CDocument::OnNewDocument())
+	if (!CAutoCompleteDemoScintillaDocBase::OnNewDocument())
 		return FALSE;
 	return TRUE;
 }
@@ -25,7 +26,7 @@ CAutoCompleteDemoScintillaDoc::~CAutoCompleteDemoScintillaDoc()
 }
 
 
-BEGIN_MESSAGE_MAP(CAutoCompleteDemoScintillaDoc, CDocument)
+BEGIN_MESSAGE_MAP(CAutoCompleteDemoScintillaDoc, CAutoCompleteDemoScintillaDocBase)
 END_MESSAGE_MAP()
 
 
@@ -34,13 +35,13 @@ END_MESSAGE_MAP()
 #ifdef _DEBUG
 void CAutoCompleteDemoScintillaDoc::AssertValid() const
 {
-	CDocument::AssertValid();
+	CAutoCompleteDemoScintillaDocBase::AssertValid();
 }
 
 #ifndef _WIN32_WCE
 void CAutoCompleteDemoScintillaDoc::Dump(CDumpContext& dc) const
 {
-	CDocument::Dump(dc);
+	CAutoCompleteDemoScintillaDocBase::Dump(dc);
 }
 #endif
 #endif //_DEBUG
@@ -63,3 +64,8 @@ void CAutoCompleteDemoScintillaDoc::Serialize(CArchive& ar)
 
 
 // CAutoCompleteDemoScintillaDoc commands
+
+
+#endif // _ENABLE_SCINTILLA_BUILD
+// THE END OF FILE
+//////////////////////////////////////////////////////////////////////////
