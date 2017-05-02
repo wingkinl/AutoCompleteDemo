@@ -1,7 +1,6 @@
 #pragma once
 #include "afxwin.h"
 #include "afxcmn.h"
-#include "AutoCompleteWnd.h"
 
 class CDemoListCtrl : public CListCtrl
 {
@@ -37,7 +36,6 @@ public:
 	virtual void Dump(CDumpContext& dc) const;
 #endif
 #endif
-	CAutoCompleteWnd	m_acWnd;
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
 	virtual void OnInitialUpdate(); // called first time after construct

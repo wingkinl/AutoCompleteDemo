@@ -12,11 +12,16 @@ IMPLEMENT_DYNAMIC(CAutoCompleteWnd, CAutoCompleteWndBase)
 
 CAutoCompleteWnd::CAutoCompleteWnd()
 {
+	ASSERT(!GetActiveInstance());
+	s_pInstance = this;
 	m_listCtrl = nullptr;
+	m_bDropRestOfWord = true;
 }
 
 CAutoCompleteWnd::~CAutoCompleteWnd()
 {
+	ASSERT(GetActiveInstance());
+	s_pInstance = nullptr;
 }
 
 BEGIN_MESSAGE_MAP(CAutoCompleteWnd, CAutoCompleteWndBase)
@@ -27,40 +32,47 @@ END_MESSAGE_MAP()
 
 BOOL CAutoCompleteWnd::Create(CWnd* pOwner, POINT pos)
 {
-#if 0
-	DWORD dwStyle = WS_POPUP|WS_BORDER|WS_VSCROLL;
-	dwStyle |= LVS_REPORT|LVS_SINGLESEL|LVS_SHOWSELALWAYS;
-	// the image list should be reused
-	dwStyle |= LVS_SHAREIMAGELISTS;
-	dwStyle |= LVS_NOCOLUMNHEADER;
+	BOOL bCreated = CAutoCompleteWndBase::Create(pOwner, pos);
+	if (!bCreated)
+		return FALSE;
+	SetOwner(pOwner);
+	return bCreated;
+}
 
-	//dwStyle |= LVS_OWNERDATA;
-	DWORD dwExStyle = WS_EX_NOPARENTNOTIFY|WS_EX_TOPMOST;
-	CRect rect(pos.x,pos.y,pos.x+100,pos.y+100);
-	BOOL bCreated = CWnd::CreateEx(dwExStyle, WC_LISTVIEW, NULL,
-		dwStyle,
-		rect.left, rect.top,
-		rect.right - rect.left, rect.bottom - rect.top,
-		NULL, NULL, NULL);
-	if (bCreated)
+CAutoCompleteWnd* CAutoCompleteWnd::s_pInstance = nullptr;
+
+CAutoCompleteWnd* CAutoCompleteWnd::GetActiveInstance()
+{
+	return s_pInstance;
+}
+
+BOOL CAutoCompleteWnd::Activate(CWnd* pOwner)
+{
+	if ( GetActiveInstance() )
 	{
-		SetExtendedStyle(LVS_EX_DOUBLEBUFFER);
-		SetWindowPos(&wndTop, -1, -1, -1, -1, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+	#ifdef _DEBUG
+		auto pActualOwner = GetActiveInstance()->GetOwner();
+		ASSERT(pActualOwner->GetSafeHwnd() == pOwner->GetSafeHwnd());
+	#endif // _DEBUG
+		return TRUE;
 	}
-	return bCreated;
-#endif
-	DWORD dwStyle = WS_POPUP;
-	CRect rect(pos.x, pos.y, pos.x + 100, pos.y + 100);
-	BOOL bCreated = CAutoCompleteWndBase::Create(NULL, _T(""), dwStyle, rect);
-	if (bCreated)
-	{
-		SetWindowPos(&wndTop, -1, -1, -1, -1, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
-	}
-	return bCreated;
+	CAutoCompleteWnd* pACWnd = new CAutoCompleteWnd;
+	POINT pos = {0};
+	if ( !pACWnd->GetInitPosition(pOwner, pos) )
+		pACWnd->NotifyOwner(ACCmdGetInitPos, 0, (LPARAM)&pos);
+	return pACWnd->Create(pOwner, pos);
+}
+
+BOOL CAutoCompleteWnd::Cancel()
+{
+	if (!GetActiveInstance())
+		return TRUE;
+	return GetActiveInstance()->DestroyWindow();
 }
 
 BOOL CAutoCompleteWnd::CreateListCtrl()
 {
+	ASSERT(!m_listCtrl);
 	m_listCtrl = new CAutoCompleteListCtrl;
 	DWORD dwStyle = WS_CHILD | WS_BORDER | WS_VSCROLL;
 	dwStyle |= LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS;
@@ -79,12 +91,61 @@ BOOL CAutoCompleteWnd::CreateListCtrl()
 	return bCreated;
 }
 
+LRESULT CAutoCompleteWnd::NotifyOwner(ACCmd cmd, WPARAM wp, LPARAM lp)
+{
+	auto pWndOwner = GetOwner();
+	if (pWndOwner->GetSafeHwnd())
+	{
+		AUTOCNMHDR nmhdr = {0};
+		nmhdr.wp = wp;
+		nmhdr.lp = lp;
+		return pWndOwner->SendMessage(WM_AC_NOTIFY, (WPARAM)cmd, (LPARAM)&nmhdr);
+	}
+	return 0;
+}
 
+BOOL CAutoCompleteWnd::GetInitPosition(CWnd* pOwner, POINT& pos) const
+{
+	ASSERT(pOwner->GetSafeHwnd());
+#define WC_SCINTILLA _T("Scintilla")
+	enum { MAX_CLASS_NAME = 256 };
+	TCHAR szClassName[MAX_CLASS_NAME] = {0};
+	GetClassName(pOwner->GetSafeHwnd(), szClassName, _countof(szClassName));
+	if (_tcsnicmp(szClassName, WC_EDIT, MAX_CLASS_NAME) == 0)
+	{
+		return GetInitPositionFromEdit(pOwner, pos);
+	}
+	else if (_tcsnicmp(szClassName, WC_SCINTILLA, MAX_CLASS_NAME) == 0)
+	{
+		return GetInitPositionFromScintilla(pOwner, pos);
+	}
+	return FALSE;
+}
+
+BOOL CAutoCompleteWnd::GetInitPositionFromEdit(CWnd* pOwner, POINT& pos) const
+{
+	CEdit* pEdit = (CEdit*)pOwner;
+	CPoint posCaret = pEdit->GetCaretPos();
+	int nCurLine = pEdit->LineFromChar(-1);
+	int nCharIndexCurLine = pEdit->LineIndex(nCurLine + 1);
+	pos = pEdit->PosFromChar(nCharIndexCurLine);
+	pos.x = posCaret.x;
+	pEdit->ClientToScreen(&pos);
+	return TRUE;
+}
+
+BOOL CAutoCompleteWnd::GetInitPositionFromScintilla(CWnd* pOwner, POINT& pos) const
+{
+	return FALSE;
+}
 
 int CAutoCompleteWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
-	if (CMiniFrameWnd::OnCreate(lpCreateStruct) == -1)
-		return -1;
-	CreateListCtrl();
+	int nRet = CSyncPopupWndBase::OnCreate(lpCreateStruct);
+	if (nRet != 0)
+		return nRet;
+	if ( !CreateListCtrl() )
+		return 1;
 	return 0;
 }
+

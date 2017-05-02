@@ -202,6 +202,7 @@
     <ClInclude Include="AutoCompleteDemoScintillaView.h" />
     <ClInclude Include="AutoCompleteListCtrl.h" />
     <ClInclude Include="AutoCompleteWnd.h" />
+    <ClInclude Include="SyncPopupWnd.h" />
     <ClInclude Include="ChildFrm.h" />
     <ClInclude Include="CntrItem.h" />
     <ClInclude Include="MainFrm.h" />
@@ -221,6 +222,7 @@
     <ClCompile Include="AutoCompleteDemoScintillaView.cpp" />
     <ClCompile Include="AutoCompleteListCtrl.cpp" />
     <ClCompile Include="AutoCompleteWnd.cpp" />
+    <ClCompile Include="SyncPopupWnd.cpp" />
     <ClCompile Include="ChildFrm.cpp" />
     <ClCompile Include="CntrItem.cpp" />
     <ClCompile Include="MainFrm.cpp" />

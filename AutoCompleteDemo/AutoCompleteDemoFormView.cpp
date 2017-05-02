@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "resource.h"
 #include "AutoCompleteDemoFormView.h"
+#include "AutoCompleteWnd.h"
 
 CDemoListCtrl::CDemoListCtrl()
 {
@@ -77,13 +78,7 @@ void CAutoCompleteDemoFormView::OnInitialUpdate()
 
 void CAutoCompleteDemoFormView::OnEnChangeMulti()
 {
-	CPoint posCaret = m_editMultiLine.GetCaretPos();
-	int nCurLine = m_editMultiLine.LineFromChar(-1);
-	int nCharIndexCurLine = m_editMultiLine.LineIndex(nCurLine+1);
-	CPoint pos = m_editMultiLine.PosFromChar(nCharIndexCurLine);
-	pos.x = posCaret.x;
-	m_editMultiLine.ClientToScreen(&pos);
-	m_acWnd.Create(&m_editMultiLine, pos);
+	CAutoCompleteWnd::Activate(&m_editMultiLine);
 }
 
 // CAutoCompleteDemoFormView diagnostics
