@@ -51,6 +51,8 @@ protected:
 	bool						m_bDropRestOfWord;
 protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
+	afx_msg void OnSize(UINT nType, int cx, int cy);
+	afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
 protected:
 	DECLARE_MESSAGE_MAP()
 };

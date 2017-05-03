@@ -1,5 +1,7 @@
 #pragma once
 
+#define _AC_DONT_USE_MFC_FP
+
 #ifndef _AC_DONT_USE_MFC_FP
 // implementation base on MFC feature pack
 typedef CMFCPopupMenu	CSyncMFCFPPopupWndBase;
@@ -14,6 +16,8 @@ public:
 	virtual BOOL Create(CWnd* pOwner, POINT pos);
 protected:
 	virtual CSize CalcSize() const = 0;
+
+	BOOL GetChildClientRect(CRect& rect);
 protected:
 	class CSyncMFCPopupMenuBar : public CMFCPopupMenuBar
 	{
@@ -42,10 +46,14 @@ public:
 	virtual BOOL Create(CWnd* pOwner, POINT pos);
 protected:
 	virtual CSize CalcSize() const = 0;
+	BOOL GetChildClientRect(CRect& rect);
 protected:
 	void PostNcDestroy() override;
 protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
+	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
+	afx_msg void OnPaint();
+	afx_msg int OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message);
 protected:
 	DECLARE_MESSAGE_MAP()
 };

@@ -26,6 +26,8 @@ CAutoCompleteWnd::~CAutoCompleteWnd()
 
 BEGIN_MESSAGE_MAP(CAutoCompleteWnd, CAutoCompleteWndBase)
 	ON_WM_CREATE()
+	ON_WM_SIZE()
+	ON_WM_KEYDOWN()
 END_MESSAGE_MAP()
 
 // CAutoCompleteWnd message handlers
@@ -74,7 +76,7 @@ BOOL CAutoCompleteWnd::CreateListCtrl()
 {
 	ASSERT(!m_listCtrl);
 	m_listCtrl = new CAutoCompleteListCtrl;
-	DWORD dwStyle = WS_CHILD | WS_BORDER | WS_VSCROLL;
+	DWORD dwStyle = WS_CHILD | WS_VSCROLL | WS_VISIBLE;
 	dwStyle |= LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS;
 	// the image list should be reused
 	dwStyle |= LVS_SHAREIMAGELISTS;
@@ -82,7 +84,7 @@ BOOL CAutoCompleteWnd::CreateListCtrl()
 
 	//dwStyle |= LVS_OWNERDATA;
 	CRect rect;
-	GetClientRect(rect);
+	SetRectEmpty(rect);
 	BOOL bCreated = m_listCtrl->Create(dwStyle, rect, this, 1);
 	if (bCreated)
 	{
@@ -147,5 +149,26 @@ int CAutoCompleteWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	if ( !CreateListCtrl() )
 		return 1;
 	return 0;
+}
+
+void CAutoCompleteWnd::OnSize(UINT nType, int cx, int cy)
+{
+	CAutoCompleteWndBase::OnSize(nType, cx, cy);
+	if (m_listCtrl->GetSafeHwnd())
+	{
+		CRect rect;
+		GetChildClientRect(rect);
+		UINT uiSWPFlags = SWP_NOZORDER | SWP_NOACTIVATE;
+		m_listCtrl->SetWindowPos(NULL, rect.left, rect.top, rect.Width(), rect.Height(), uiSWPFlags);
+	}
+}
+
+void CAutoCompleteWnd::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
+{
+	if (nChar == _T('A'))
+	{
+		TRACE0("hello?\r\n");
+	}
+	CAutoCompleteWndBase::OnKeyDown(nChar, nRepCnt, nFlags);
 }
 
