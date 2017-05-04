@@ -4,13 +4,35 @@
 
 class CDemoListCtrl : public CListCtrl
 {
+	DECLARE_DYNCREATE(CDemoListCtrl)
 public:
 	CDemoListCtrl();
 	~CDemoListCtrl();
 public:
 	void InitList();
 protected:
-private:
+	afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
+	afx_msg void OnBeginLabelEdit(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnEndLabelEdit(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnLButtonDblClk(UINT nFlags, CPoint point);
+protected:
+	DECLARE_MESSAGE_MAP()
+};
+
+class CDemoEdit : public CEdit
+{
+	DECLARE_DYNCREATE(CDemoEdit)
+public:
+	CDemoEdit();
+	~CDemoEdit();
+public:
+	bool m_bAutoDelete;
+protected:
+	void PostNcDestroy() override;
+protected:
+	afx_msg void OnChar(UINT nChar, UINT nRepCnt, UINT nFlags);
+protected:
+	DECLARE_MESSAGE_MAP()
 };
 
 // CAutoCompleteDemoFormView form view
@@ -39,12 +61,11 @@ public:
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
 	virtual void OnInitialUpdate(); // called first time after construct
-	afx_msg void OnEnChangeMulti();
 
 	DECLARE_MESSAGE_MAP()
 public:
-	CEdit m_editSingleLine;
-	CEdit m_editMultiLine;
+	CDemoEdit m_editSingleLine;
+	CDemoEdit m_editMultiLine;
 	CDemoListCtrl m_listctrl;
 };
 

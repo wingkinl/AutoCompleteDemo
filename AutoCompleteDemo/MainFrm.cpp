@@ -37,6 +37,7 @@ static UINT indicators[] =
 // CMainFrame construction/destruction
 
 CMainFrame::CMainFrame()
+	: m_spImpl(this)
 {
 	// TODO: add member initialization code here
 }
@@ -250,3 +251,9 @@ BOOL CMainFrame::LoadFrame(UINT nIDResource, DWORD dwDefaultStyle, CWnd* pParent
 	return TRUE;
 }
 
+BOOL CMainFrame::PreTranslateMessage(MSG* pMsg)
+{
+	if ( m_spImpl.PreTranslateMessage(pMsg) )
+		return TRUE;
+	return CMDIFrameWndEx::PreTranslateMessage(pMsg);
+}

@@ -1,52 +1,24 @@
 #pragma once
 
-#define _AC_DONT_USE_MFC_FP
+typedef CWnd	CSyncPopupWndBase;
 
-#ifndef _AC_DONT_USE_MFC_FP
-// implementation base on MFC feature pack
-typedef CMFCPopupMenu	CSyncMFCFPPopupWndBase;
-
-class CSyncMFCFPPopupWnd : public CSyncMFCFPPopupWndBase
+class CSyncPopupWnd : public CWnd
 {
-	DECLARE_DYNAMIC(CSyncMFCFPPopupWnd)
+	DECLARE_DYNAMIC(CSyncPopupWnd)
 public:
-	CSyncMFCFPPopupWnd();
-	virtual ~CSyncMFCFPPopupWnd();
+	CSyncPopupWnd();
+	virtual ~CSyncPopupWnd();
 public:
 	virtual BOOL Create(CWnd* pOwner, POINT pos);
-protected:
-	virtual CSize CalcSize() const = 0;
 
-	BOOL GetChildClientRect(CRect& rect);
-protected:
-	class CSyncMFCPopupMenuBar : public CMFCPopupMenuBar
-	{
-	public:
-		CSize CalcSize(BOOL bVertDock) override;
+	BOOL HitTest(const POINT& ptScreen) const;
 
-		BOOL Create(CWnd* pParentWnd, DWORD dwStyle = AFX_DEFAULT_TOOLBAR_STYLE, UINT nID = AFX_IDW_TOOLBAR) override;
-	};
-	CSyncMFCPopupMenuBar m_wndSyncMenuBar;
-
-	CMFCPopupMenuBar* GetMenuBar() override { return &m_wndSyncMenuBar; }
-};
-
-#define CSyncPopupWndBase	CSyncMFCFPPopupWnd
-#else
-// implementation that does not rely on MFC feature pack
-typedef CWnd	CSyncNonMFCFPPopupWndBase;
-
-class CSyncNonMFCFPPopupWnd : public CWnd
-{
-	DECLARE_DYNAMIC(CSyncNonMFCFPPopupWnd)
+	virtual void Close();
 public:
-	CSyncNonMFCFPPopupWnd();
-	virtual ~CSyncNonMFCFPPopupWnd();
-public:
-	virtual BOOL Create(CWnd* pOwner, POINT pos);
+	static CSyncPopupWnd* GetActivePopup() { return m_pActivePopupWnd; }
+	static CSyncPopupWnd* GetSafeActivePopup();
 protected:
-	virtual CSize CalcSize() const = 0;
-	BOOL GetChildClientRect(CRect& rect);
+	virtual CSize CalcSize() const;
 protected:
 	void PostNcDestroy() override;
 protected:
@@ -54,20 +26,10 @@ protected:
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	afx_msg void OnPaint();
 	afx_msg int OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message);
+	afx_msg void OnDestroy();
+	afx_msg void OnActivateApp(BOOL bActive, DWORD dwThreadID);
 protected:
 	DECLARE_MESSAGE_MAP()
-};
 
-#define CSyncPopupWndBase	CSyncNonMFCFPPopupWnd
-#endif // !_AC_DONT_USE_MFC_FP
-
-
-class CSyncPopupWnd : public CSyncPopupWndBase
-{
-	DECLARE_DYNAMIC(CSyncPopupWnd)
-public:
-	CSyncPopupWnd();
-	~CSyncPopupWnd();
-public:
-	CSize CalcSize() const override;
+	static CSyncPopupWnd* m_pActivePopupWnd;
 };

@@ -32,6 +32,8 @@ public:
 #endif // _ENABLE_SCINTILLA_BUILD
 	bool	m_bDuringInit;
 
+	CStringArray	m_saTestList;
+
 	virtual void PreLoadState();
 	virtual void LoadCustomState();
 	virtual void SaveCustomState();

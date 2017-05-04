@@ -202,6 +202,25 @@ BOOL CAutoCompleteDemoApp::InitInstance()
 	pMainFrame->ShowWindow(m_nCmdShow);
 	pMainFrame->UpdateWindow();
 
+	CStdioFile file;
+	UINT nFlags = CFile::typeText | CFile::modeRead;
+	if ( file.Open(_T("TestList.txt"), nFlags) )
+	{
+		CString strLine;
+		while ( file.ReadString(strLine) )
+		{
+			strLine.TrimLeft();
+			strLine.TrimRight();
+			if (strLine.IsEmpty())
+				continue;
+			m_saTestList.Add(strLine);
+		}
+	}
+	else
+	{
+		AfxMessageBox(_T("Please prepare TestList.txt!"));
+	}
+
 	m_bDuringInit = false;
 
 	return TRUE;

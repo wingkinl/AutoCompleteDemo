@@ -27,7 +27,6 @@ CAutoCompleteWnd::~CAutoCompleteWnd()
 BEGIN_MESSAGE_MAP(CAutoCompleteWnd, CAutoCompleteWndBase)
 	ON_WM_CREATE()
 	ON_WM_SIZE()
-	ON_WM_KEYDOWN()
 END_MESSAGE_MAP()
 
 // CAutoCompleteWnd message handlers
@@ -48,7 +47,7 @@ CAutoCompleteWnd* CAutoCompleteWnd::GetActiveInstance()
 	return s_pInstance;
 }
 
-BOOL CAutoCompleteWnd::Activate(CWnd* pOwner)
+BOOL CAutoCompleteWnd::Activate(CWnd* pOwner, UINT nChar)
 {
 	if ( GetActiveInstance() )
 	{
@@ -70,27 +69,6 @@ BOOL CAutoCompleteWnd::Cancel()
 	if (!GetActiveInstance())
 		return TRUE;
 	return GetActiveInstance()->DestroyWindow();
-}
-
-BOOL CAutoCompleteWnd::CreateListCtrl()
-{
-	ASSERT(!m_listCtrl);
-	m_listCtrl = new CAutoCompleteListCtrl;
-	DWORD dwStyle = WS_CHILD | WS_VSCROLL | WS_VISIBLE;
-	dwStyle |= LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS;
-	// the image list should be reused
-	dwStyle |= LVS_SHAREIMAGELISTS;
-	dwStyle |= LVS_NOCOLUMNHEADER;
-
-	//dwStyle |= LVS_OWNERDATA;
-	CRect rect;
-	SetRectEmpty(rect);
-	BOOL bCreated = m_listCtrl->Create(dwStyle, rect, this, 1);
-	if (bCreated)
-	{
-		m_listCtrl->SetExtendedStyle(LVS_EX_DOUBLEBUFFER);
-	}
-	return bCreated;
 }
 
 LRESULT CAutoCompleteWnd::NotifyOwner(ACCmd cmd, WPARAM wp, LPARAM lp)
@@ -141,13 +119,38 @@ BOOL CAutoCompleteWnd::GetInitPositionFromScintilla(CWnd* pOwner, POINT& pos) co
 	return FALSE;
 }
 
+CAutoCompleteListCtrl* CAutoCompleteWnd::CreateListCtrl()
+{
+	return new CAutoCompleteListCtrl;
+}
+
 int CAutoCompleteWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
-	int nRet = CSyncPopupWndBase::OnCreate(lpCreateStruct);
+	int nRet = CAutoCompleteWndBase::OnCreate(lpCreateStruct);
 	if (nRet != 0)
 		return nRet;
-	if ( !CreateListCtrl() )
+	ASSERT(!m_listCtrl);
+	m_listCtrl = CreateListCtrl();
+	if (!m_listCtrl)
+	{
+		ASSERT(0);
 		return 1;
+	}
+	DWORD dwStyle = WS_CHILD | WS_VSCROLL | WS_VISIBLE;
+	dwStyle |= LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS;
+	// the image list should be reused
+	dwStyle |= LVS_SHAREIMAGELISTS;
+	dwStyle |= LVS_NOCOLUMNHEADER;
+
+	dwStyle |= LVS_OWNERDATA;
+	CRect rect;
+	SetRectEmpty(rect);
+	BOOL bCreated = m_listCtrl->Create(dwStyle, rect, this, 1);
+	if (!bCreated)
+		return 1;
+
+	m_strValidChars.Empty();
+
 	return 0;
 }
 
@@ -157,18 +160,76 @@ void CAutoCompleteWnd::OnSize(UINT nType, int cx, int cy)
 	if (m_listCtrl->GetSafeHwnd())
 	{
 		CRect rect;
-		GetChildClientRect(rect);
+		GetClientRect(rect);
 		UINT uiSWPFlags = SWP_NOZORDER | SWP_NOACTIVATE;
 		m_listCtrl->SetWindowPos(NULL, rect.left, rect.top, rect.Width(), rect.Height(), uiSWPFlags);
 	}
 }
 
-void CAutoCompleteWnd::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
+BOOL CAutoCompleteWnd::OnKey(UINT nChar)
 {
-	if (nChar == _T('A'))
+	if (!m_listCtrl->GetSafeHwnd())
 	{
-		TRACE0("hello?\r\n");
+		ASSERT(0);
+		Close();
+		return FALSE;
 	}
-	CAutoCompleteWndBase::OnKeyDown(nChar, nRepCnt, nFlags);
+	switch (nChar)
+	{
+	case VK_ESCAPE:
+		Close();
+		return TRUE;
+	case VK_UP:
+		m_listCtrl->MoveSelection(-1);
+		return TRUE;
+	case VK_DOWN:
+		m_listCtrl->MoveSelection(1);
+		return TRUE;
+	case VK_PRIOR:
+		m_listCtrl->MoveSelection(-m_listCtrl->GetVisibleRows());
+		return TRUE;
+	case VK_NEXT:
+		m_listCtrl->MoveSelection(m_listCtrl->GetVisibleRows());
+		return TRUE;
+	case VK_TAB:
+		return TRUE;
+	case VK_RETURN:
+		return TRUE;
+	case VK_BACK:
+		return TRUE;
+	case VK_CONTROL:
+		return TRUE;
+	}
+	if ('A' <= nChar && nChar <= 'Z' || m_strValidChars.Find((TCHAR)nChar) >= 0 )
+	{
+		if (GetKeyState(VK_SHIFT) < 0 
+			|| GetKeyState(VK_CONTROL) < 0 
+			|| GetKeyState(VK_MENU) < 0
+			)
+		{
+			Close();
+			return FALSE;
+		}
+		return TRUE;
+	}
+	Close();
+	return FALSE;
 }
 
+void CAutoCompleteWnd::Close()
+{
+	CAutoCompleteWndBase::Close();
+}
+
+LRESULT CAutoCompleteWnd::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch (message)
+	{
+	case WM_KEYDOWN:
+		return OnKey((UINT)wParam) ? 0 : -1;
+	case WM_SYSKEYDOWN:
+		Close();
+		return -1;
+	}
+	return CAutoCompleteWndBase::WindowProc(message, wParam, lParam);
+}

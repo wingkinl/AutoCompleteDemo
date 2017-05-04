@@ -31,14 +31,18 @@ public:
 	BOOL Create(CWnd* pOwner, POINT pos) override;
 
 	static CAutoCompleteWnd*	GetActiveInstance();
-	static BOOL					Activate(CWnd* pOwner);
+	static BOOL					Activate(CWnd* pOwner, UINT nChar);
 	static BOOL					Cancel();
 protected:
-	BOOL CreateListCtrl();
+	virtual CAutoCompleteListCtrl* CreateListCtrl();
 
 	LRESULT NotifyOwner(ACCmd cmd, WPARAM wp = 0, LPARAM lp = 0);
 
 	virtual BOOL GetInitPosition(CWnd* pOwner, POINT& pos) const;
+
+	virtual BOOL OnKey(UINT nChar);
+
+	void Close() override;
 private:
 	BOOL GetInitPositionFromEdit(CWnd* pOwner, POINT& pos) const;
 	BOOL GetInitPositionFromScintilla(CWnd* pOwner, POINT& pos) const;
@@ -49,10 +53,12 @@ protected:
 	static CAutoCompleteWnd*	s_pInstance;
 	CAutoCompleteListCtrl*		m_listCtrl;
 	bool						m_bDropRestOfWord;
+	CString						m_strValidChars;
 protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
-	afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
+
+	LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 protected:
 	DECLARE_MESSAGE_MAP()
 };

@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "SyncPopupFrameImpl.h"
 
 class CMainFrame : public CMDIFrameWndEx
 {
@@ -21,7 +22,8 @@ public:
 	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
 	virtual BOOL LoadFrame(UINT nIDResource, DWORD dwDefaultStyle = WS_OVERLAPPEDWINDOW | FWS_ADDTOTITLE, CWnd* pParentWnd = NULL, CCreateContext* pContext = NULL);
 
-// Implementation
+	BOOL PreTranslateMessage(MSG* pMsg) override;
+	// Implementation
 public:
 	virtual ~CMainFrame();
 #ifdef _DEBUG
@@ -34,6 +36,7 @@ protected:  // control bar embedded members
 	CMFCToolBar       m_wndToolBar;
 	CMFCStatusBar     m_wndStatusBar;
 	CMFCToolBarImages m_UserImages;
+	CSyncPopupFrameImpl	m_spImpl;
 
 // Generated message map functions
 protected:
