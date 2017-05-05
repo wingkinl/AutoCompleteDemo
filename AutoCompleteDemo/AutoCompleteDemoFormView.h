@@ -19,6 +19,8 @@ protected:
 	DECLARE_MESSAGE_MAP()
 };
 
+struct AUTOCNMHDR;
+
 class CDemoEdit : public CEdit
 {
 	DECLARE_DYNCREATE(CDemoEdit)
@@ -29,8 +31,11 @@ public:
 	bool m_bAutoDelete;
 protected:
 	void PostNcDestroy() override;
+
+	BOOL GetInitInfo(AUTOCNMHDR* nmhdr) const;
 protected:
 	afx_msg void OnChar(UINT nChar, UINT nRepCnt, UINT nFlags);
+	afx_msg LRESULT OnACNotify(WPARAM wp, LPARAM lp);
 protected:
 	DECLARE_MESSAGE_MAP()
 };

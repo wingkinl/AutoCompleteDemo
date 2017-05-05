@@ -5,6 +5,7 @@
 #include "resource.h"
 #include "AutoCompleteDemoFormView.h"
 #include "AutoCompleteWnd.h"
+#include "AutoCompleteDemo.h"
 
 CDemoListCtrl::CDemoListCtrl()
 {
@@ -100,6 +101,7 @@ IMPLEMENT_DYNCREATE(CDemoEdit, CEdit)
 
 BEGIN_MESSAGE_MAP(CDemoEdit, CEdit)
 	ON_WM_CHAR()
+	ON_MESSAGE(WM_AC_NOTIFY, &CDemoEdit::OnACNotify)
 END_MESSAGE_MAP()
 
 void CDemoEdit::OnChar(UINT nChar, UINT nRepCnt, UINT nFlags)
@@ -108,6 +110,51 @@ void CDemoEdit::OnChar(UINT nChar, UINT nRepCnt, UINT nFlags)
 	CAutoCompleteWnd::Activate(this, nChar);
 }
 
+class CDemoEditACImp : public CEditACImp
+{
+public:
+	BOOL IsValidChar(UINT nChar) const override;
+};
+
+BOOL CDemoEditACImp::IsValidChar(UINT nChar) const
+{
+	if (!CEditACImp::IsValidChar(nChar))
+	{
+		switch (nChar)
+		{
+		case _T('_'):
+		case _T('$'):
+			return TRUE;
+		}
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOL CDemoEdit::GetInitInfo(AUTOCNMHDR* nmhdr) const
+{
+	AUTOCINITINFO* pInfo = (AUTOCINITINFO*)nmhdr->lp;
+	pInfo->nListItems = (int)theApp.m_saTestList.GetCount();
+
+	CDemoEditACImp acImp;
+	acImp.m_pEdit = (CEdit*)this;
+	CString strWordBegin;
+	BOOL bRet = acImp.GetInitInfo(pInfo->posScreen, strWordBegin);
+	return bRet;
+}
+
+LRESULT CDemoEdit::OnACNotify(WPARAM wp, LPARAM lp)
+{
+	ACCmd cmd = (ACCmd)wp;
+	AUTOCNMHDR* nmhdr = (AUTOCNMHDR*)lp;
+
+	switch (cmd)
+	{
+	case ACCmdGetInitInfo:
+		return GetInitInfo(nmhdr);
+	}
+	return 0;
+}
 
 // CAutoCompleteDemoFormView
 
@@ -167,3 +214,4 @@ void CAutoCompleteDemoFormView::Dump(CDumpContext& dc) const
 
 
 // CAutoCompleteDemoFormView message handlers
+

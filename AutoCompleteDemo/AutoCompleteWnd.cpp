@@ -5,6 +5,48 @@
 #include "AutoCompleteWnd.h"
 #include "AutoCompleteListCtrl.h"
 
+CEditACImp::CEditACImp(CEdit* pEdit)
+{
+
+}
+
+CEditACImp::~CEditACImp()
+{
+
+}
+
+BOOL CEditACImp::GetInitInfo(POINT& pos, CString& strWordBegin) const
+{
+	int nSelStartChar = 0, nSelEndChar = 0;
+	m_pEdit->GetSel(nSelStartChar, nSelEndChar);
+
+	int nCurLine = m_pEdit->LineFromChar(-1);
+	int nCurLineStartChar = m_pEdit->LineIndex(nCurLine);
+	
+	ASSERT(nSelStartChar > nCurLineStartChar);
+
+	int nLineLen = m_pEdit->LineLength(nCurLine);
+	CString strLine;
+	auto pszLine = strLine.GetBuffer(nLineLen);
+	m_pEdit->GetLine(nCurLine, (LPTSTR)pszLine, nLineLen);
+	strLine.ReleaseBuffer();
+
+	int nCurCharOffset = nSelStartChar - nCurLineStartChar - 1;
+	for (int nCharPos = nCurCharOffset; nCharPos >= 0; --nCharPos)
+	{
+		if ( !IsValidChar(pszLine[nCharPos]) )
+			break;
+		strWordBegin.Insert(0, pszLine[nCharPos]);
+	}
+	m_pEdit->ClientToScreen(&pos);
+	return !strWordBegin.IsEmpty();
+}
+
+
+BOOL CEditACImp::IsValidChar(UINT nChar) const
+{
+	return _istalnum(nChar);
+}
 
 // CAutoCompleteWnd
 
@@ -40,6 +82,25 @@ BOOL CAutoCompleteWnd::Create(CWnd* pOwner, POINT pos)
 	return bCreated;
 }
 
+void CAutoCompleteWnd::SetItemCount(int nItems)
+{
+	if (m_listCtrl)
+		m_listCtrl->SetItemCount(nItems);
+}
+
+int CAutoCompleteWnd::GetItemCount() const
+{
+	if (m_listCtrl)
+		return m_listCtrl->GetItemCount();
+	return -1;
+}
+
+void CAutoCompleteWnd::SetImageList(CImageList* pImageList)
+{
+	if (m_listCtrl)
+		m_listCtrl->SetImageList(pImageList, LVSIL_NORMAL);
+}
+
 CAutoCompleteWnd* CAutoCompleteWnd::s_pInstance = nullptr;
 
 CAutoCompleteWnd* CAutoCompleteWnd::GetActiveInstance()
@@ -47,28 +108,47 @@ CAutoCompleteWnd* CAutoCompleteWnd::GetActiveInstance()
 	return s_pInstance;
 }
 
+BOOL CAutoCompleteWnd::IsActiveOwner(CWnd* pWnd)
+{
+	if (!GetSafeHwnd())
+		return FALSE;
+	return GetOwner()->GetSafeHwnd() == pWnd->GetSafeHwnd();
+}
+
 BOOL CAutoCompleteWnd::Activate(CWnd* pOwner, UINT nChar)
 {
 	if ( GetActiveInstance() )
 	{
-	#ifdef _DEBUG
-		auto pActualOwner = GetActiveInstance()->GetOwner();
-		ASSERT(pActualOwner->GetSafeHwnd() == pOwner->GetSafeHwnd());
-	#endif // _DEBUG
-		return TRUE;
+		if (GetActiveInstance()->IsActiveOwner(pOwner) )
+		{
+			GetActiveInstance()->UpdateList(nChar);
+			return TRUE;
+		}
+		// this is weird, the window should have been deactivated already,
+		// better to investigate how is this possible
+		ASSERT(0);
+		GetActiveInstance()->Close();
 	}
+
+	AUTOCINITINFO info = {0};
+	if ( !NotifyOwner(pOwner, ACCmdGetInitInfo, 0, (LPARAM)&info) || info.nListItems <= 0 )
+		return FALSE;
 	CAutoCompleteWnd* pACWnd = new CAutoCompleteWnd;
-	POINT pos = {0};
-	if ( !pACWnd->GetInitPosition(pOwner, pos) )
-		pACWnd->NotifyOwner(ACCmdGetInitPos, 0, (LPARAM)&pos);
-	return pACWnd->Create(pOwner, pos);
+	BOOL bCreated = pACWnd->Create(pOwner, info.posScreen);
+	if (bCreated)
+	{
+		if (info.pImageList)
+			pACWnd->SetImageList(info.pImageList);
+		pACWnd->SetItemCount(info.nListItems);
+	}
+	return bCreated;
 }
 
 BOOL CAutoCompleteWnd::Cancel()
 {
-	if (!GetActiveInstance())
-		return TRUE;
-	return GetActiveInstance()->DestroyWindow();
+	if (GetActiveInstance())
+		GetActiveInstance()->Close();
+	return TRUE;
 }
 
 LRESULT CAutoCompleteWnd::NotifyOwner(ACCmd cmd, WPARAM wp, LPARAM lp)
@@ -76,47 +156,17 @@ LRESULT CAutoCompleteWnd::NotifyOwner(ACCmd cmd, WPARAM wp, LPARAM lp)
 	auto pWndOwner = GetOwner();
 	if (pWndOwner->GetSafeHwnd())
 	{
-		AUTOCNMHDR nmhdr = {0};
-		nmhdr.wp = wp;
-		nmhdr.lp = lp;
-		return pWndOwner->SendMessage(WM_AC_NOTIFY, (WPARAM)cmd, (LPARAM)&nmhdr);
+		return NotifyOwner(pWndOwner, cmd, wp, lp);
 	}
 	return 0;
 }
 
-BOOL CAutoCompleteWnd::GetInitPosition(CWnd* pOwner, POINT& pos) const
+LRESULT CAutoCompleteWnd::NotifyOwner(CWnd* pWndOwner, ACCmd cmd, WPARAM wp, LPARAM lp)
 {
-	ASSERT(pOwner->GetSafeHwnd());
-#define WC_SCINTILLA _T("Scintilla")
-	enum { MAX_CLASS_NAME = 256 };
-	TCHAR szClassName[MAX_CLASS_NAME] = {0};
-	GetClassName(pOwner->GetSafeHwnd(), szClassName, _countof(szClassName));
-	if (_tcsnicmp(szClassName, WC_EDIT, MAX_CLASS_NAME) == 0)
-	{
-		return GetInitPositionFromEdit(pOwner, pos);
-	}
-	else if (_tcsnicmp(szClassName, WC_SCINTILLA, MAX_CLASS_NAME) == 0)
-	{
-		return GetInitPositionFromScintilla(pOwner, pos);
-	}
-	return FALSE;
-}
-
-BOOL CAutoCompleteWnd::GetInitPositionFromEdit(CWnd* pOwner, POINT& pos) const
-{
-	CEdit* pEdit = (CEdit*)pOwner;
-	CPoint posCaret = pEdit->GetCaretPos();
-	int nCurLine = pEdit->LineFromChar(-1);
-	int nCharIndexCurLine = pEdit->LineIndex(nCurLine + 1);
-	pos = pEdit->PosFromChar(nCharIndexCurLine);
-	pos.x = posCaret.x;
-	pEdit->ClientToScreen(&pos);
-	return TRUE;
-}
-
-BOOL CAutoCompleteWnd::GetInitPositionFromScintilla(CWnd* pOwner, POINT& pos) const
-{
-	return FALSE;
+	AUTOCNMHDR nmhdr = {0};
+	nmhdr.wp = wp;
+	nmhdr.lp = lp;
+	return pWndOwner->SendMessage(WM_AC_NOTIFY, (WPARAM)cmd, (LPARAM)&nmhdr);
 }
 
 CAutoCompleteListCtrl* CAutoCompleteWnd::CreateListCtrl()
@@ -148,8 +198,6 @@ int CAutoCompleteWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	BOOL bCreated = m_listCtrl->Create(dwStyle, rect, this, 1);
 	if (!bCreated)
 		return 1;
-
-	m_strValidChars.Empty();
 
 	return 0;
 }
@@ -200,7 +248,8 @@ BOOL CAutoCompleteWnd::OnKey(UINT nChar)
 	case VK_CONTROL:
 		return TRUE;
 	}
-	if ('A' <= nChar && nChar <= 'Z' || m_strValidChars.Find((TCHAR)nChar) >= 0 )
+	
+	if ('A' <= nChar && nChar <= 'Z')
 	{
 		if (GetKeyState(VK_SHIFT) < 0 
 			|| GetKeyState(VK_CONTROL) < 0 
@@ -221,6 +270,11 @@ void CAutoCompleteWnd::Close()
 	CAutoCompleteWndBase::Close();
 }
 
+void CAutoCompleteWnd::UpdateList(UINT nChar)
+{
+	NotifyOwner(ACCmdUpdateList);
+}
+
 LRESULT CAutoCompleteWnd::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
@@ -233,3 +287,4 @@ LRESULT CAutoCompleteWnd::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	return CAutoCompleteWndBase::WindowProc(message, wParam, lParam);
 }
+
