@@ -17,9 +17,9 @@ CDemoListCtrl::~CDemoListCtrl()
 
 }
 
-IMPLEMENT_DYNCREATE(CDemoListCtrl, CListCtrl)
+IMPLEMENT_DYNCREATE(CDemoListCtrl, CMFCListCtrl)
 
-BEGIN_MESSAGE_MAP(CDemoListCtrl, CListCtrl)
+BEGIN_MESSAGE_MAP(CDemoListCtrl, CMFCListCtrl)
 	ON_WM_KEYDOWN()
 	ON_NOTIFY_REFLECT(LVN_BEGINLABELEDIT, &OnBeginLabelEdit)
 	ON_NOTIFY_REFLECT(LVN_ENDLABELEDIT, &OnEndLabelEdit)
@@ -28,6 +28,7 @@ END_MESSAGE_MAP()
 
 void CDemoListCtrl::InitList()
 {
+	ModifyStyle(0, LVS_SHOWSELALWAYS);
 	SetExtendedStyle(LVS_EX_DOUBLEBUFFER | LVS_EX_FULLROWSELECT);
 	InsertColumn(0, _T("Name"));
 	InsertColumn(1, _T("Age"));
@@ -53,7 +54,7 @@ void CDemoListCtrl::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		if (nItem >= 0)
 			EditLabel(nItem);
 	}
-	CListCtrl::OnKeyDown(nChar, nRepCnt, nFlags);
+	CMFCListCtrl::OnKeyDown(nChar, nRepCnt, nFlags);
 }
 
 void CDemoListCtrl::OnBeginLabelEdit(NMHDR* pNMHDR, LRESULT* pResult)
@@ -78,9 +79,12 @@ void CDemoListCtrl::OnLButtonDblClk(UINT nFlags, CPoint point)
 		EditLabel(nItem);
 		return;
 	}
-	CListCtrl::OnLButtonDblClk(nFlags, point);
+	CMFCListCtrl::OnLButtonDblClk(nFlags, point);
 }
 
+/************************************************************************/
+/* CDemoEdit
+/************************************************************************/
 CDemoEdit::CDemoEdit()
 {
 	m_bAutoDelete = false;
@@ -131,16 +135,97 @@ BOOL CDemoEditACImp::IsValidChar(UINT nChar) const
 	return TRUE;
 }
 
-BOOL CDemoEdit::GetInitInfo(AUTOCNMHDR* nmhdr) const
+BOOL CDemoEdit::GetACInitInfo(AUTOCNMHDR* nmhdr)
 {
-	AUTOCINITINFO* pInfo = (AUTOCINITINFO*)nmhdr->lp;
-	pInfo->nListItems = (int)theApp.m_saTestList.GetCount();
+	AUTOCINITINFO* pInfo = (AUTOCINITINFO*)nmhdr;
 
 	CDemoEditACImp acImp;
 	acImp.m_pEdit = (CEdit*)this;
-	CString strWordBegin;
-	BOOL bRet = acImp.GetInitInfo(pInfo->posScreen, strWordBegin);
+	BOOL bRet = acImp.GetInitInfo(pInfo);
+	if (bRet)
+	{
+		pInfo->nListItems = UpdateFilteredList((LPCTSTR)pInfo->strStart);
+	}
 	return bRet;
+}
+
+BOOL CDemoEdit::GetACDisplayInfo(AUTOCNMHDR* nmhdr) const
+{
+	AUTOCDISPINFO* pInfo = (AUTOCDISPINFO*)nmhdr;
+	AUTOCITEM& item = pInfo->item;
+	if (item.mask & AUTOCITEM::ACIF_TEXT)
+	{
+		int nItem = item.nItem;
+		if (nItem < m_arrFilteredIndices.GetSize())
+			nItem = m_arrFilteredIndices[nItem];
+		_tcsncpy(item.pszText, (LPCTSTR)theApp.m_saTestList[nItem], item.cchTextMax);
+	}
+	if (item.mask & AUTOCITEM::ACIF_IMAGE)
+	{
+		item.nImaage = -1;
+	}
+	return TRUE;
+}
+
+BOOL CDemoEdit::HandleKey(AUTOCNMHDR* nmhdr)
+{
+	AUTOCKEYINFO* pInfo = (AUTOCKEYINFO*)nmhdr;
+	CDemoEditACImp acImp;
+	acImp.m_pEdit = (CEdit*)this;
+
+	CString strText;
+	BOOL bIsValid = acImp.HandleKey(pInfo, strText);
+	if (bIsValid)
+	{
+		pInfo->nItemCount = UpdateFilteredList((LPCTSTR)strText);
+		pInfo->bClose = FALSE;
+	}
+	if (!bIsValid)
+	{
+		pInfo->bClose = TRUE;
+	}
+	pInfo->bEatKey = FALSE;
+	return TRUE;
+}
+
+BOOL CDemoEdit::AutoComplete(AUTOCNMHDR* nmhdr)
+{
+	AUTOCCOMPLETE* pInfo = (AUTOCCOMPLETE*)nmhdr;
+	CDemoEditACImp acImp;
+	acImp.m_pEdit = (CEdit*)this;
+	acImp.AutoComplete(pInfo);
+	return TRUE;
+}
+
+int CDemoEdit::UpdateFilteredList(LPCTSTR pszText)
+{
+	m_arrFilteredIndices.RemoveAll();
+	int nItemCount = (int)theApp.m_saTestList.GetCount();
+	if (pszText && *pszText)
+	{
+		int nTextLen = (int)_tcslen(pszText);
+		for (int ii = 0; ii < nItemCount; ++ii)
+		{
+			CString strItemText = theApp.m_saTestList[ii];
+			LPCTSTR pszItemText = (LPCTSTR)strItemText;
+			for (int nChar = 0; nChar < nTextLen; ++nChar)
+			{
+				pszItemText = StrChrI(pszItemText, pszText[nChar]);
+				if (!pszItemText)
+					break;
+				if (pszItemText++ >= pszItemText + strItemText.GetLength()-1)
+				{
+					pszItemText = nullptr;
+					break;
+				}
+			}
+			if (pszItemText)
+			{
+				m_arrFilteredIndices.Add(ii);
+			}
+		}
+	}
+	return (int)m_arrFilteredIndices.GetSize();
 }
 
 LRESULT CDemoEdit::OnACNotify(WPARAM wp, LPARAM lp)
@@ -151,7 +236,13 @@ LRESULT CDemoEdit::OnACNotify(WPARAM wp, LPARAM lp)
 	switch (cmd)
 	{
 	case ACCmdGetInitInfo:
-		return GetInitInfo(nmhdr);
+		return (LRESULT)GetACInitInfo(nmhdr);
+	case ACCmdGetListDispInfo:
+		return (LRESULT)GetACDisplayInfo(nmhdr);
+	case ACCmdKey:
+		return (LRESULT)HandleKey(nmhdr);
+	case ACCmdComplete:
+		return (LRESULT)AutoComplete(nmhdr);
 	}
 	return 0;
 }

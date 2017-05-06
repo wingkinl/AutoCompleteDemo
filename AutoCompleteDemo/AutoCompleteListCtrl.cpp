@@ -19,7 +19,7 @@ CAutoCompleteListCtrl::~CAutoCompleteListCtrl()
 {
 }
 
-void CAutoCompleteListCtrl::MoveSelection(int nDelta)
+int CAutoCompleteListCtrl::MoveSelection(int nDelta)
 {
 	int nCurSel = GetCurSel();
 	nCurSel += nDelta;
@@ -32,11 +32,7 @@ void CAutoCompleteListCtrl::MoveSelection(int nDelta)
 			nCurSel = nItemCount-1;
 	}
 	SetCurSel(nCurSel);
-}
-
-int CAutoCompleteListCtrl::GetVisibleRows() const
-{
-	return 10;
+	return nCurSel;
 }
 
 int CAutoCompleteListCtrl::GetCurSel() const
@@ -49,6 +45,23 @@ void CAutoCompleteListCtrl::SetCurSel(int nItem)
 	SetItemState(nItem, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
 }
 
+int CAutoCompleteListCtrl::GetItemHeight() const
+{
+	int nHorzSpacing = 0, nVertSpacing = 0;
+	GetItemSpacing(TRUE, &nHorzSpacing, &nVertSpacing);
+	return nVertSpacing;
+}
+
+BOOL CAutoCompleteListCtrl::IsShowVScrollBar() const
+{
+	return m_bShowVScroll;
+}
+
+void CAutoCompleteListCtrl::SetShowVScrollBar(BOOL bShow)
+{
+	m_bShowVScroll = bShow;
+}
+
 void CAutoCompleteListCtrl::HitTestSelectItem(const POINT& point)
 {
 	// We must take control of selection to prevent this window activating
@@ -56,6 +69,11 @@ void CAutoCompleteListCtrl::HitTestSelectItem(const POINT& point)
 	int nItem = HitTest(point);
 	if (nItem >= 0)
 		SetCurSel(nItem);
+}
+
+void CAutoCompleteListCtrl::PostNcDestroy()
+{
+	delete this;
 }
 
 BEGIN_MESSAGE_MAP(CAutoCompleteListCtrl, CAutoCompleteListCtrlBase)
@@ -68,6 +86,7 @@ BEGIN_MESSAGE_MAP(CAutoCompleteListCtrl, CAutoCompleteListCtrlBase)
 	ON_WM_RBUTTONDBLCLK()
 	ON_WM_MBUTTONDOWN()
 	ON_WM_SIZE()
+	ON_WM_NCCALCSIZE()
 END_MESSAGE_MAP()
 
 // CAutoCompleteListCtrl message handlers
@@ -80,18 +99,8 @@ int CAutoCompleteListCtrl::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
 	SetExtendedStyle(LVS_EX_DOUBLEBUFFER|LVS_EX_FULLROWSELECT);
 
-	InsertColumn(0, _T("Name"));
-
-	int nItem = 0;
-	InsertItem(nItem++, _T("Tom"));
-	InsertItem(nItem++, _T("John"));
-	InsertItem(nItem++, _T("Emily"));
-	InsertItem(nItem++, _T("May"));
-	InsertItem(nItem++, _T("Mike"));
-	InsertItem(nItem++, _T("Morgan"));
-	InsertItem(nItem++, _T("Steve"));
-
-	SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
+ 	InsertColumn(0, _T("Value"));
+ 	SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 
 	return 0;
 }
@@ -138,4 +147,15 @@ void CAutoCompleteListCtrl::OnSize(UINT nType, int cx, int cy)
 	SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 }
 
+void CAutoCompleteListCtrl::OnNcCalcSize(BOOL bCalcValidRects, NCCALCSIZE_PARAMS* lpncsp)
+{
+	DWORD dwRemove = WS_HSCROLL;
+	DWORD dwAdd = 0;
+	if (IsShowVScrollBar())
+		dwAdd |= WS_VSCROLL;
+	else
+		dwRemove |= WS_VSCROLL;
+	ModifyStyle(dwRemove, dwAdd);
+	CAutoCompleteListCtrlBase::OnNcCalcSize(bCalcValidRects, lpncsp);
+}
 

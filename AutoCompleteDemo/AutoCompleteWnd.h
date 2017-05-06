@@ -1,23 +1,14 @@
 #pragma once
 
-class CEditACImp
-{
-public:
-	CEditACImp(CEdit* pEdit = nullptr);
-	virtual ~CEditACImp();
-
-	virtual BOOL GetInitInfo(POINT& pos, CString& strWordBegin) const;
-	virtual BOOL IsValidChar(UINT nChar) const;
-public:
-	CEdit*	m_pEdit;
-};
-
 #include "SyncPopupWnd.h"
 
 enum ACCmd
 {
-	ACCmdGetInitInfo		= 0,
-	ACCmdUpdateList,
+	ACCmdGetInitInfo,		// return non-zero to show the window
+	ACCmdGetListDispInfo,
+	ACCmdSelChange,
+	ACCmdKey,
+	ACCmdComplete,
 
 	ACCmdCustom			= 1024,
 };
@@ -26,18 +17,100 @@ enum ACCmd
 
 struct AUTOCNMHDR
 {
+	HWND	hwndFrom;
 	WPARAM	wp;
 	LPARAM	lp;
 };
 
+typedef int		EditPosLen;
+
 struct AUTOCINITINFO 
 {
-	POINT		posScreen;	// the initial position of the auto complete window
-	int			nListItems;	// the number of items in the list
-	CImageList*	pImageList;
+	AUTOCNMHDR	hdr;
+	POINT		posACWndScreen;	// the initial position of the auto complete window
+	int			nListItems;		// the number of items in the list
+	int			nPreSelectItem;	// the item to be selected when display
+	int			nMaxVisibleItems;
+	EditPosLen	nPosStartChar;	// the position of the first character in editor
+	EditPosLen	nStartStrLen;	// the pre-entered length of characters
+	CString		strStart;
+	BOOL		bDropRestOfWord;
+	CImageList*	pImageList;		// the image list for displaying icon
 };
 
-typedef NMLVDISPINFO	NMACDISPINFO;
+struct AUTOCITEM
+{
+	enum MaskType
+	{
+		ACIF_TEXT = 0x00000001,
+		ACIF_IMAGE = 0x00000002,
+	};
+	UINT	mask;
+	int		nItem;
+	int		nImaage;
+	LPTSTR	pszText;
+	int		cchTextMax;
+};
+
+struct AUTOCDISPINFO 
+{
+	AUTOCNMHDR	hdr;
+	AUTOCITEM	item;
+};
+
+struct AUTOCKEYINFO 
+{
+	AUTOCNMHDR	hdr;
+	EditPosLen	nPosStartChar;
+	UINT		nKey;
+	UINT		nChar;
+
+	int			nItemCount;	// negative value means don't update list
+	int			nPreSelectItem;	// the item to be selected when display
+	BOOL		bEatKey;	// eat the char
+	BOOL		bClose;		// whether to close the window
+};
+
+struct AUTOCCOMPLETE 
+{
+	AUTOCNMHDR	hdr;
+	EditPosLen	nPosStartChar;
+	BOOL		bDropRestOfWord;
+	int			nItem;
+	CString		strText;
+};
+
+class CWindowACImp
+{
+public:
+	CWindowACImp();
+	virtual ~CWindowACImp();
+
+	virtual BOOL GetInitInfo(AUTOCINITINFO* pInfo) const = 0;
+	virtual BOOL IsValidChar(UINT nChar) const;
+
+	virtual BOOL HandleKey(AUTOCKEYINFO* pInfo, CString& strText) const;
+	virtual BOOL AutoComplete(AUTOCCOMPLETE* pInfo) const = 0;
+
+	virtual BOOL GetRangeText(CString& strText, EditPosLen nStart, EditPosLen nEnd) const = 0;
+	virtual EditPosLen GetCaretPos() const = 0;
+};
+
+class CEditACImp : public CWindowACImp
+{
+public:
+	CEditACImp();
+	virtual ~CEditACImp();
+
+	virtual BOOL GetInitInfo(AUTOCINITINFO* pInfo) const;
+	BOOL AutoComplete(AUTOCCOMPLETE* pInfo) const override;
+
+	BOOL		GetRangeText(CString& strText, EditPosLen nStart, EditPosLen nEnd) const override;
+	EditPosLen	GetCaretPos() const override;
+public:
+	CEdit*	m_pEdit;
+};
+
 
 // CAutoCompleteWnd
 class CAutoCompleteListCtrl;
@@ -48,12 +121,19 @@ class CAutoCompleteWnd : public CAutoCompleteWndBase
 {
 	DECLARE_DYNAMIC(CAutoCompleteWnd)
 public:
-	BOOL Create(CWnd* pOwner, POINT pos) override;
+	BOOL Create(CWnd* pOwner, const AUTOCINITINFO& info);
 
 	BOOL IsActiveOwner(CWnd* pWnd);
 
 	void SetItemCount(int nItems);
 	int GetItemCount() const;
+
+	int GetVisibleItems() const;
+	int GetTopIndex() const;
+
+	int MoveSelection(int nDelta);
+
+	void DoAutoCompletion();
 
 	void SetImageList(CImageList* pImageList);
 
@@ -65,22 +145,39 @@ public:
 protected:
 	virtual CAutoCompleteListCtrl* CreateListCtrl();
 
-	LRESULT NotifyOwner(ACCmd cmd, WPARAM wp = 0, LPARAM lp = 0);
-	static LRESULT NotifyOwner(CWnd* pWndOwner, ACCmd cmd, WPARAM wp = 0, LPARAM lp = 0);
+	void PrepareNotifyHeader(AUTOCNMHDR* hdr);
 
-	virtual BOOL OnKey(UINT nChar);
+	LRESULT NotifyOwner(ACCmd cmd, AUTOCNMHDR* pHdr) const;
+	static LRESULT NotifyOwnerImpl(CWnd* pWndOwner, ACCmd cmd, AUTOCNMHDR* pHdr);
 
-	void UpdateList(UINT nChar);
+	virtual BOOL OnKey(UINT nKey);
+
+	BOOL NotifyKey(UINT nKey);
+
+	void UpdateListItemCount(int nItemCount);
+
+	void RecalcSizeToFitList();
+
+	void CustomDrawListImpl(CDC* pDC, LPNMLVCUSTOMDRAW plvcd);
+	void OnDrawLabel(CDC* pDC, LPNMLVCUSTOMDRAW plvcd, UINT nState, CRect& rect, BOOL bCalcOnly = FALSE);
 protected:
 	CAutoCompleteWnd();
 	virtual ~CAutoCompleteWnd();
 protected:
 	static CAutoCompleteWnd*	s_pInstance;
 	CAutoCompleteListCtrl*		m_listCtrl;
-	bool						m_bDropRestOfWord;
+	AUTOCINITINFO				m_infoInit;
+	CSize						m_szIcon;
+	int							m_nVisibleItems;
+	int							m_nMaxItemWidth;
+	bool						m_bReady;
 protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
+
+	afx_msg void OnCustomDrawList(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnGetListDispInfo(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnItemChangeList(NMHDR* pNMHDR, LRESULT* pResult);
 
 	LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 protected:

@@ -18,8 +18,6 @@ public:
 	static CSyncPopupWnd* GetActivePopup() { return m_pActivePopupWnd; }
 	static CSyncPopupWnd* GetSafeActivePopup();
 protected:
-	virtual CSize CalcSize() const;
-protected:
 	void PostNcDestroy() override;
 protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);

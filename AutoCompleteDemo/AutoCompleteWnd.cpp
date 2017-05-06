@@ -5,7 +5,56 @@
 #include "AutoCompleteWnd.h"
 #include "AutoCompleteListCtrl.h"
 
-CEditACImp::CEditACImp(CEdit* pEdit)
+#define DEFAULT_MAX_VISIBLE_ITEM	10
+
+CWindowACImp::CWindowACImp()
+{
+
+}
+
+CWindowACImp::~CWindowACImp()
+{
+
+}
+
+BOOL CWindowACImp::IsValidChar(UINT nChar) const
+{
+	return _istalnum(nChar);
+}
+
+BOOL CWindowACImp::HandleKey(AUTOCKEYINFO* pInfo, CString& strText) const
+{
+	BOOL bIsValid = TRUE;
+	switch (pInfo->nKey)
+	{
+	case VK_DELETE:
+		break;
+	case VK_BACK:
+		{
+			auto nCaretPos = GetCaretPos();
+			if (nCaretPos == pInfo->nPosStartChar + 1)
+			{
+				pInfo->bClose = TRUE;
+				bIsValid = FALSE;
+			}
+		}
+		break;
+	default:
+		bIsValid = IsValidChar(pInfo->nChar);
+		break;
+	}
+	if (bIsValid)
+	{
+		GetRangeText(strText, pInfo->nPosStartChar, GetCaretPos());
+		if (pInfo->nKey == VK_BACK)
+			strText.Delete(strText.GetLength()-1);
+		else
+			strText.AppendChar(pInfo->nChar);
+	}
+	return bIsValid;
+}
+
+CEditACImp::CEditACImp()
 {
 
 }
@@ -15,37 +64,126 @@ CEditACImp::~CEditACImp()
 
 }
 
-BOOL CEditACImp::GetInitInfo(POINT& pos, CString& strWordBegin) const
+BOOL CEditACImp::GetInitInfo(AUTOCINITINFO* pInfo) const
 {
 	int nSelStartChar = 0, nSelEndChar = 0;
 	m_pEdit->GetSel(nSelStartChar, nSelEndChar);
 
-	int nCurLine = m_pEdit->LineFromChar(-1);
+	int nCurLine = m_pEdit->LineFromChar(nSelStartChar);
 	int nCurLineStartChar = m_pEdit->LineIndex(nCurLine);
 	
-	ASSERT(nSelStartChar > nCurLineStartChar);
+	ASSERT(nSelStartChar >= nCurLineStartChar);
 
-	int nLineLen = m_pEdit->LineLength(nCurLine);
+	int nLineLen = m_pEdit->LineLength(nCurLineStartChar);
 	CString strLine;
 	auto pszLine = strLine.GetBuffer(nLineLen);
 	m_pEdit->GetLine(nCurLine, (LPTSTR)pszLine, nLineLen);
 	strLine.ReleaseBuffer();
 
+	pInfo->strStart.Empty();
+
 	int nCurCharOffset = nSelStartChar - nCurLineStartChar - 1;
-	for (int nCharPos = nCurCharOffset; nCharPos >= 0; --nCharPos)
+	int nCharPos = nCurCharOffset;
+	for (; nCharPos >= 0; --nCharPos)
 	{
-		if ( !IsValidChar(pszLine[nCharPos]) )
+		if (!IsValidChar(pszLine[nCharPos]))
+		{
 			break;
-		strWordBegin.Insert(0, pszLine[nCharPos]);
+		}
+		pInfo->strStart.Insert(0, pszLine[nCharPos]);
 	}
-	m_pEdit->ClientToScreen(&pos);
-	return !strWordBegin.IsEmpty();
+
+	pInfo->nPosStartChar = (EditPosLen)(nCurLineStartChar + nCharPos + 1);
+	pInfo->nStartStrLen = (EditPosLen)pInfo->strStart.GetLength();
+
+	if (pInfo->nStartStrLen == 0)
+		return FALSE;
+	// note: PosFromChar returns top-left corner of a given character
+	pInfo->posACWndScreen = m_pEdit->PosFromChar(pInfo->nPosStartChar);
+	m_pEdit->ClientToScreen(&pInfo->posACWndScreen);
+
+	if (m_pEdit->GetStyle() & ES_MULTILINE)
+	{
+		// PosFromChar gives us top-left corner, but we need bottom left!
+		int nLineCount = m_pEdit->GetLineCount();
+		if (nLineCount > 1)
+		{
+			int nNextPrevLine = nCurLine < nLineCount - 1 ? nCurLine + 1 : nCurLine - 1;
+			int nNextPrevLineCharPos = m_pEdit->LineIndex(nNextPrevLine);
+			CPoint posNextPrevLine = m_pEdit->PosFromChar(nNextPrevLineCharPos);
+			m_pEdit->ClientToScreen(&posNextPrevLine);
+			pInfo->posACWndScreen.y += abs(posNextPrevLine.y - pInfo->posACWndScreen.y);
+		}
+		else
+		{
+			TEXTMETRIC tm;
+			CDC* pDC = m_pEdit->GetDC();
+			pDC->GetTextMetrics(&tm);
+			m_pEdit->ReleaseDC(pDC);
+			pInfo->posACWndScreen.y += tm.tmHeight;
+		}
+	}
+	else
+	{
+		CRect rect;
+		m_pEdit->GetWindowRect(rect);
+		pInfo->posACWndScreen.y = rect.bottom;
+	}
+	return !pInfo->strStart.IsEmpty();
 }
 
-
-BOOL CEditACImp::IsValidChar(UINT nChar) const
+BOOL CEditACImp::AutoComplete(AUTOCCOMPLETE* pInfo) const
 {
-	return _istalnum(nChar);
+	int nEndChar = GetCaretPos();
+	if (pInfo->bDropRestOfWord)
+	{
+		int nCurLine = m_pEdit->LineFromChar(nEndChar);
+		int nCurLineStartChar = m_pEdit->LineIndex(nCurLine);
+
+		ASSERT(nEndChar >= nCurLineStartChar);
+
+		int nLineLen = m_pEdit->LineLength(nCurLineStartChar);
+		CString strLine;
+		auto pszLine = strLine.GetBuffer(nLineLen);
+		m_pEdit->GetLine(nCurLine, (LPTSTR)pszLine, nLineLen);
+		strLine.ReleaseBuffer();
+
+		int nCurCharOffset = nEndChar - nCurLineStartChar;
+		for (int nCharPos = nCurCharOffset; nCharPos < nLineLen; ++nCharPos)
+		{
+			if (!IsValidChar(pszLine[nCharPos]))
+			{
+				nEndChar = nCurLineStartChar + nCharPos;
+				break;
+			}
+		}
+	}
+	m_pEdit->SetSel(pInfo->nPosStartChar, nEndChar, TRUE);
+	m_pEdit->ReplaceSel(pInfo->strText);
+	return TRUE;
+}
+
+BOOL CEditACImp::GetRangeText(CString& strText, EditPosLen nStart, EditPosLen nEnd) const
+{
+	int nCurLine = m_pEdit->LineFromChar(nStart);
+	int nCurLineStartChar = m_pEdit->LineIndex(nCurLine);
+
+	ASSERT(nStart >= nCurLineStartChar);
+
+	int nLineLen = m_pEdit->LineLength(nCurLineStartChar);
+	CString strLine;
+	auto pszLine = strLine.GetBuffer(nLineLen);
+	m_pEdit->GetLine(nCurLine, (LPTSTR)pszLine, nLineLen);
+	strLine.ReleaseBuffer();
+	strText = strLine.Mid(nStart - nCurLineStartChar, nEnd - nStart);
+	return TRUE;
+}
+
+EditPosLen CEditACImp::GetCaretPos() const
+{
+	int nSelStartChar = 0, nSelEndChar = 0;
+	m_pEdit->GetSel(nSelStartChar, nSelEndChar);
+	return (EditPosLen)nSelStartChar;
 }
 
 // CAutoCompleteWnd
@@ -57,7 +195,10 @@ CAutoCompleteWnd::CAutoCompleteWnd()
 	ASSERT(!GetActiveInstance());
 	s_pInstance = this;
 	m_listCtrl = nullptr;
-	m_bDropRestOfWord = true;
+	m_infoInit.nMaxVisibleItems = DEFAULT_MAX_VISIBLE_ITEM;
+	m_nVisibleItems = DEFAULT_MAX_VISIBLE_ITEM;
+	m_nMaxItemWidth = 0;
+	m_bReady = false;
 }
 
 CAutoCompleteWnd::~CAutoCompleteWnd()
@@ -66,26 +207,40 @@ CAutoCompleteWnd::~CAutoCompleteWnd()
 	s_pInstance = nullptr;
 }
 
+#define IDC_AUTO_LIST_CTRL	1
+
 BEGIN_MESSAGE_MAP(CAutoCompleteWnd, CAutoCompleteWndBase)
 	ON_WM_CREATE()
 	ON_WM_SIZE()
+	ON_NOTIFY(NM_CUSTOMDRAW, IDC_AUTO_LIST_CTRL, &CAutoCompleteWnd::OnCustomDrawList)
+	ON_NOTIFY(LVN_GETDISPINFO, IDC_AUTO_LIST_CTRL, &CAutoCompleteWnd::OnGetListDispInfo)
+	ON_NOTIFY(LVN_ITEMCHANGED, IDC_AUTO_LIST_CTRL, &CAutoCompleteWnd::OnItemChangeList)
 END_MESSAGE_MAP()
 
 // CAutoCompleteWnd message handlers
 
-BOOL CAutoCompleteWnd::Create(CWnd* pOwner, POINT pos)
+BOOL CAutoCompleteWnd::Create(CWnd* pOwner, const AUTOCINITINFO& info)
 {
-	BOOL bCreated = CAutoCompleteWndBase::Create(pOwner, pos);
+	BOOL bCreated = CAutoCompleteWndBase::Create(pOwner, info.posACWndScreen);
 	if (!bCreated)
 		return FALSE;
 	SetOwner(pOwner);
+	m_infoInit = info;
+	if (info.pImageList)
+		SetImageList(info.pImageList);
+	UpdateListItemCount(info.nListItems);
+	m_listCtrl->SetCurSel(info.nPreSelectItem);
+	m_bReady = true;
 	return bCreated;
 }
 
 void CAutoCompleteWnd::SetItemCount(int nItems)
 {
 	if (m_listCtrl)
-		m_listCtrl->SetItemCount(nItems);
+	{
+		DWORD dwFlags = LVSICF_NOINVALIDATEALL | LVSICF_NOSCROLL;
+		m_listCtrl->SetItemCountEx(nItems, dwFlags);
+	}
 }
 
 int CAutoCompleteWnd::GetItemCount() const
@@ -95,10 +250,58 @@ int CAutoCompleteWnd::GetItemCount() const
 	return -1;
 }
 
+int CAutoCompleteWnd::GetVisibleItems() const
+{
+	return m_nVisibleItems;
+}
+
+int CAutoCompleteWnd::GetTopIndex() const
+{
+	if (m_listCtrl)
+		return m_listCtrl->GetTopIndex();
+	return -1;
+}
+
+int CAutoCompleteWnd::MoveSelection(int nDelta)
+{
+	if (!m_listCtrl)
+		return -1;
+	int nTopItemIndex = GetTopIndex();
+	int nOldSelItem = m_listCtrl->GetCurSel();
+	int nCurSelItem = m_listCtrl->MoveSelection(nDelta);
+	if (nCurSelItem < nTopItemIndex || nCurSelItem >= nTopItemIndex + GetVisibleItems())
+	{
+		// TODO
+		//m_listCtrl->EnsureVisible(nCurSelItem, FALSE);
+		CSize szScroll(0, m_listCtrl->GetItemHeight()* (nCurSelItem-nOldSelItem));
+		m_listCtrl->Scroll(szScroll);
+		RecalcSizeToFitList();
+	}
+	return nCurSelItem;
+}
+
+void CAutoCompleteWnd::DoAutoCompletion()
+{
+	AUTOCCOMPLETE info;
+	PrepareNotifyHeader((AUTOCNMHDR*)&info);
+	info.nPosStartChar = m_infoInit.nPosStartChar;
+	info.bDropRestOfWord = m_infoInit.bDropRestOfWord;
+	info.nItem = m_listCtrl->GetCurSel();
+	info.strText = m_listCtrl->GetItemText(info.nItem, 0);
+	NotifyOwner(ACCmdComplete, (AUTOCNMHDR*)&info);
+	Close();
+}
+
 void CAutoCompleteWnd::SetImageList(CImageList* pImageList)
 {
 	if (m_listCtrl)
+	{
 		m_listCtrl->SetImageList(pImageList, LVSIL_NORMAL);
+		IMAGEINFO ii = { 0 };
+		pImageList->GetImageInfo(0, &ii);
+		m_szIcon.cx = abs(ii.rcImage.right - ii.rcImage.left);
+		m_szIcon.cy = abs(ii.rcImage.bottom - ii.rcImage.top);
+	}
 }
 
 CAutoCompleteWnd* CAutoCompleteWnd::s_pInstance = nullptr;
@@ -121,7 +324,6 @@ BOOL CAutoCompleteWnd::Activate(CWnd* pOwner, UINT nChar)
 	{
 		if (GetActiveInstance()->IsActiveOwner(pOwner) )
 		{
-			GetActiveInstance()->UpdateList(nChar);
 			return TRUE;
 		}
 		// this is weird, the window should have been deactivated already,
@@ -131,16 +333,12 @@ BOOL CAutoCompleteWnd::Activate(CWnd* pOwner, UINT nChar)
 	}
 
 	AUTOCINITINFO info = {0};
-	if ( !NotifyOwner(pOwner, ACCmdGetInitInfo, 0, (LPARAM)&info) || info.nListItems <= 0 )
+	info.nMaxVisibleItems = DEFAULT_MAX_VISIBLE_ITEM;
+	info.bDropRestOfWord = TRUE;
+	if ( NotifyOwnerImpl(pOwner, ACCmdGetInitInfo, (AUTOCNMHDR*)&info) == 0 || info.nListItems <= 0 )
 		return FALSE;
 	CAutoCompleteWnd* pACWnd = new CAutoCompleteWnd;
-	BOOL bCreated = pACWnd->Create(pOwner, info.posScreen);
-	if (bCreated)
-	{
-		if (info.pImageList)
-			pACWnd->SetImageList(info.pImageList);
-		pACWnd->SetItemCount(info.nListItems);
-	}
+	BOOL bCreated = pACWnd->Create(pOwner, info);
 	return bCreated;
 }
 
@@ -151,27 +349,29 @@ BOOL CAutoCompleteWnd::Cancel()
 	return TRUE;
 }
 
-LRESULT CAutoCompleteWnd::NotifyOwner(ACCmd cmd, WPARAM wp, LPARAM lp)
+LRESULT CAutoCompleteWnd::NotifyOwner(ACCmd cmd, AUTOCNMHDR* pHdr) const
 {
 	auto pWndOwner = GetOwner();
 	if (pWndOwner->GetSafeHwnd())
 	{
-		return NotifyOwner(pWndOwner, cmd, wp, lp);
+		return NotifyOwnerImpl(pWndOwner, cmd, pHdr);
 	}
 	return 0;
 }
 
-LRESULT CAutoCompleteWnd::NotifyOwner(CWnd* pWndOwner, ACCmd cmd, WPARAM wp, LPARAM lp)
+LRESULT CAutoCompleteWnd::NotifyOwnerImpl(CWnd* pWndOwner, ACCmd cmd, AUTOCNMHDR* pHdr)
 {
-	AUTOCNMHDR nmhdr = {0};
-	nmhdr.wp = wp;
-	nmhdr.lp = lp;
-	return pWndOwner->SendMessage(WM_AC_NOTIFY, (WPARAM)cmd, (LPARAM)&nmhdr);
+	return pWndOwner->SendMessage(WM_AC_NOTIFY, (WPARAM)cmd, (LPARAM)pHdr);
 }
 
 CAutoCompleteListCtrl* CAutoCompleteWnd::CreateListCtrl()
 {
 	return new CAutoCompleteListCtrl;
+}
+
+void CAutoCompleteWnd::PrepareNotifyHeader(AUTOCNMHDR* hdr)
+{
+	hdr->hwndFrom = m_hWnd;
 }
 
 int CAutoCompleteWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
@@ -191,11 +391,10 @@ int CAutoCompleteWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	// the image list should be reused
 	dwStyle |= LVS_SHAREIMAGELISTS;
 	dwStyle |= LVS_NOCOLUMNHEADER;
-
 	dwStyle |= LVS_OWNERDATA;
 	CRect rect;
 	SetRectEmpty(rect);
-	BOOL bCreated = m_listCtrl->Create(dwStyle, rect, this, 1);
+	BOOL bCreated = m_listCtrl->Create(dwStyle, rect, this, IDC_AUTO_LIST_CTRL);
 	if (!bCreated)
 		return 1;
 
@@ -214,55 +413,236 @@ void CAutoCompleteWnd::OnSize(UINT nType, int cx, int cy)
 	}
 }
 
-BOOL CAutoCompleteWnd::OnKey(UINT nChar)
+void CAutoCompleteWnd::OnGetListDispInfo(NMHDR* pNMHDR, LRESULT* pResult)
 {
+	LV_DISPINFO* pDispInfo = (LV_DISPINFO*)pNMHDR;
+	ASSERT(pDispInfo);
+
+	LVITEM& listItem = pDispInfo->item;
+
+	AUTOCDISPINFO info = { 0 };
+	PrepareNotifyHeader((AUTOCNMHDR*)&info);
+	AUTOCITEM& acItem = info.item;
+	acItem.nItem = listItem.iItem;
+	
+	if (listItem.mask & LVIF_TEXT)
+	{
+		// See document for LVITEM:
+		// the list-view control allows any length string to be stored as item text, only the first 260 TCHARs are displayed.
+		// so better truncate the text here instead of leaving junk/gibberish string
+		acItem.pszText = listItem.pszText;
+		acItem.cchTextMax = listItem.cchTextMax;
+		acItem.mask |= acItem.ACIF_TEXT;
+	}
+
+	if (listItem.mask & LVIF_IMAGE)
+	{
+		acItem.mask |= acItem.ACIF_IMAGE;
+	}
+
+	VERIFY( NotifyOwner(ACCmdGetListDispInfo, (AUTOCNMHDR*)&info) );
+
+	listItem.iImage = acItem.nImaage;
+
+	*pResult = 0;
+}
+
+void CAutoCompleteWnd::OnItemChangeList(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	NM_LISTVIEW* pNMLV = (NM_LISTVIEW*)pNMHDR;
+	if ( m_bReady && (pNMLV->uChanged & LVIF_STATE) && (pNMLV->uNewState & LVIS_SELECTED) )
+	{
+		AUTOCNMHDR info = { 0 };
+		PrepareNotifyHeader((AUTOCNMHDR*)&info);
+		info.wp = (WPARAM)pNMLV->iItem;
+		NotifyOwner(ACCmdSelChange, (AUTOCNMHDR*)&info);
+	}
+}
+
+void CAutoCompleteWnd::OnCustomDrawList(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	ENSURE(pNMHDR != NULL);
+	LPNMLVCUSTOMDRAW lplvcd = (LPNMLVCUSTOMDRAW)pNMHDR;
+
+	switch (lplvcd->nmcd.dwDrawStage)
+	{
+	case CDDS_PREPAINT:
+		*pResult = CDRF_NOTIFYITEMDRAW;
+		break;
+	case CDDS_ITEMPREPAINT:
+		{
+			CDC* pDC = CDC::FromHandle(lplvcd->nmcd.hdc);
+			CustomDrawListImpl(pDC, lplvcd);
+			*pResult = CDRF_SKIPDEFAULT;
+		}
+		break;
+	}
+}
+
+void CAutoCompleteWnd::CustomDrawListImpl(CDC* pDC, LPNMLVCUSTOMDRAW plvcd)
+{
+	NMLVCUSTOMDRAW lvcd = *plvcd;
+	// MSDN says CDIS_SELECTED is not reliable so we need to 'correct' it
+	UINT nState = m_listCtrl->GetItemState((int)plvcd->nmcd.dwItemSpec, LVIS_SELECTED);
+	BOOL bSelected = nState & LVIS_SELECTED;
+	CRect rect;
+	int nRow = (int)plvcd->nmcd.dwItemSpec;
+	m_listCtrl->GetItemRect(nRow, rect, LVIR_BOUNDS);
+	COLORREF clrBkOrig = m_listCtrl->GetBkColor();
+	COLORREF clrBk = clrBkOrig;
+	if (bSelected)
+		clrBk = GetSysColor(COLOR_MENUHILIGHT);
+
+	// Background
+	pDC->FillSolidRect(rect, clrBk);
+
+	// Icon
+	auto pImageList = m_listCtrl->GetImageList(LVSIL_NORMAL);
+	if (pImageList)
+	{
+		LVITEM item = { 0 };
+		item.mask = LVIF_IMAGE;
+		VERIFY(m_listCtrl->GetItem(&item));
+		int nIcon = item.iImage;
+		CRect rcIcon;
+		m_listCtrl->GetSubItemRect(nRow, 0, LVIR_ICON, rcIcon);
+// 		rcIcon = rect;
+// 		rcIcon.left += LIST_ITEM_GAP;
+// 		rcIcon.right = rcIcon.left + m_szIcon.cx;
+		CPoint pt = rcIcon.TopLeft();
+		pt.x += (rcIcon.Width() - m_szIcon.cx) / 2;
+		pt.y += (rcIcon.Height() - m_szIcon.cy) / 2;
+		UINT nIconStyle = ILD_TRANSPARENT;
+		pImageList->Draw(pDC, nIcon, pt, nIconStyle);
+	}
+
+	// Label
+	OnDrawLabel(pDC, plvcd, nState, rect);
+}
+
+void CAutoCompleteWnd::OnDrawLabel(CDC* pDC, LPNMLVCUSTOMDRAW plvcd, UINT nState, CRect& rect, BOOL bCalcOnly)
+{
+	auto pImageList = m_listCtrl->GetImageList(LVSIL_NORMAL);
+	int nRow = (int)plvcd->nmcd.dwItemSpec;
+	BOOL bSelected = nState & LVIS_SELECTED;
+	m_listCtrl->GetItemRect(nRow, rect, LVIR_LABEL);
+// 	m_listCtrl->GetItemRect(nRow, rect, LVIR_BOUNDS);
+// 	rect.left += LIST_ITEM_GAP + pImageList ? LIST_ITEM_ICON_LABEL_GAP : 0;
+	if (bCalcOnly)
+		rect.right = LONG_MAX;
+	CString str = m_listCtrl->GetItemText(nRow, plvcd->iSubItem);
+	UINT nFormat = DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX | DT_VCENTER;
+	int nOldBKMode = pDC->SetBkMode(TRANSPARENT);
+	COLORREF clrText = bSelected ? GetSysColor(COLOR_HIGHLIGHTTEXT) : m_listCtrl->GetTextColor();
+	auto clrOldText = pDC->SetTextColor(clrText);
+	if (bCalcOnly)
+		nFormat |= DT_CALCRECT;
+	pDC->DrawText((LPCTSTR)str, &rect, nFormat);
+
+	pDC->SetBkMode(nOldBKMode);
+	pDC->SetTextColor(clrOldText);
+}
+
+BOOL CAutoCompleteWnd::OnKey(UINT nKey)
+{
+	// return TRUE to eat the key
 	if (!m_listCtrl->GetSafeHwnd())
 	{
 		ASSERT(0);
 		Close();
 		return FALSE;
 	}
-	switch (nChar)
+	switch (nKey)
 	{
 	case VK_ESCAPE:
 		Close();
-		return TRUE;
+		break;
 	case VK_UP:
-		m_listCtrl->MoveSelection(-1);
-		return TRUE;
+		MoveSelection(-1);
+		break;
 	case VK_DOWN:
-		m_listCtrl->MoveSelection(1);
-		return TRUE;
+		MoveSelection(1);
+		break;
 	case VK_PRIOR:
-		m_listCtrl->MoveSelection(-m_listCtrl->GetVisibleRows());
-		return TRUE;
+		MoveSelection(-GetVisibleItems());
+		break;
 	case VK_NEXT:
-		m_listCtrl->MoveSelection(m_listCtrl->GetVisibleRows());
-		return TRUE;
+		MoveSelection(GetVisibleItems());
+		break;
 	case VK_TAB:
-		return TRUE;
 	case VK_RETURN:
-		return TRUE;
-	case VK_BACK:
-		return TRUE;
+		DoAutoCompletion();
+		break;
 	case VK_CONTROL:
-		return TRUE;
+		// TODO, change alpha
+		Close();
+		return FALSE;
+	case VK_SHIFT:
+	case VK_CAPITAL:
+	case VK_NUMLOCK:
+	case VK_INSERT:
+		break;
+	default:
+		return NotifyKey(nKey);
 	}
-	
-	if ('A' <= nChar && nChar <= 'Z')
+	return TRUE;
+}
+
+BOOL CAutoCompleteWnd::NotifyKey(UINT nKey)
+{
+	AUTOCKEYINFO info = { 0 };
+	PrepareNotifyHeader((AUTOCNMHDR*)&info);
+	info.nKey = nKey;
+	info.nChar = nKey;
+	switch (nKey)
 	{
-		if (GetKeyState(VK_SHIFT) < 0 
-			|| GetKeyState(VK_CONTROL) < 0 
-			|| GetKeyState(VK_MENU) < 0
-			)
+	case VK_DELETE:
+	case VK_BACK:
+		break;
+	default:
 		{
-			Close();
-			return FALSE;
+			UINT nChar = info.nChar;
+	#ifndef _UNICODE
+			WORD wChar = 0;
+			BYTE lpKeyState[256];
+			::GetKeyboardState(lpKeyState);
+
+			::ToAsciiEx(nChar, MapVirtualKey(nChar, 0), lpKeyState, &wChar, 1, ::GetKeyboardLayout(AfxGetThread()->m_nThreadID));
+
+			info.nChar = (UINT)wChar;
+	#else
+			TCHAR szChar[2];
+			memset(szChar, 0, sizeof(TCHAR) * 2);
+			BYTE lpKeyState[256];
+			ENSURE(::GetKeyboardState(lpKeyState));
+
+			::ToUnicodeEx(nChar, MapVirtualKey(nChar, 0), lpKeyState, szChar, 2, 1, ::GetKeyboardLayout(AfxGetThread()->m_nThreadID));
+			info.nChar = (UINT)szChar[0];
+	#endif // _UNICODE
 		}
-		return TRUE;
+		break;
 	}
-	Close();
-	return FALSE;
+
+	info.nPosStartChar = m_infoInit.nPosStartChar;
+
+	info.nItemCount = -1;
+	info.nPreSelectItem = m_listCtrl->GetCurSel();
+	info.bEatKey = FALSE;
+	info.bClose = TRUE;
+	NotifyOwner(ACCmdKey, (AUTOCNMHDR*)&info);
+	if (info.bClose)
+	{
+		Close();
+	}
+	else
+	{
+		if (info.nItemCount >= 0)
+		{
+			UpdateListItemCount(info.nItemCount);
+			m_listCtrl->SetCurSel(info.nPreSelectItem);
+		}
+	}
+	return info.bEatKey;
 }
 
 void CAutoCompleteWnd::Close()
@@ -270,9 +650,48 @@ void CAutoCompleteWnd::Close()
 	CAutoCompleteWndBase::Close();
 }
 
-void CAutoCompleteWnd::UpdateList(UINT nChar)
+void CAutoCompleteWnd::UpdateListItemCount(int nItemCount)
 {
-	NotifyOwner(ACCmdUpdateList);
+	SetItemCount(nItemCount);
+	BOOL bShowVScroll = GetItemCount() > m_infoInit.nMaxVisibleItems;
+	m_listCtrl->SetShowVScrollBar(bShowVScroll);
+	RecalcSizeToFitList();
+}
+
+void CAutoCompleteWnd::RecalcSizeToFitList()
+{
+	int nItemCount = m_listCtrl->GetItemCount();
+	int nTopItemIndex = GetTopIndex();
+	//m_nMaxItemWidth = 0;
+	m_nVisibleItems = min(m_infoInit.nMaxVisibleItems, nItemCount);
+	CClientDC dc(m_listCtrl);
+	CRect rectLabel;
+	for (int nItem = nTopItemIndex; nItem < nTopItemIndex + m_nVisibleItems; ++nItem)
+	{
+		NMLVCUSTOMDRAW lvcd = { 0 };
+		lvcd.nmcd.dwItemSpec = nItem;
+		OnDrawLabel(&dc, &lvcd, 0, rectLabel, TRUE);
+		m_nMaxItemWidth = max(m_nMaxItemWidth, rectLabel.right);
+	}
+
+	int nVertSpacing = m_listCtrl->GetItemHeight();
+	CPoint posWnd(0,0);
+	CSize szWnd;
+	szWnd.cx = m_nMaxItemWidth; // + GetSystemMetrics(SM_CYVSCROLL);
+	szWnd.cy = nVertSpacing * m_nVisibleItems;
+	UINT nFlags = SWP_NOACTIVATE;
+	BOOL bVisible = IsWindowVisible();
+	if (bVisible)
+	{
+		nFlags |= SWP_NOMOVE;
+	}
+	else
+	{
+		nFlags |= SWP_SHOWWINDOW;
+		posWnd = m_infoInit.posACWndScreen;
+		posWnd.x -= rectLabel.left;
+	}
+	SetWindowPos(&wndTop, posWnd.x, posWnd.y, szWnd.cx, szWnd.cy, nFlags);
 }
 
 LRESULT CAutoCompleteWnd::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
@@ -287,4 +706,3 @@ LRESULT CAutoCompleteWnd::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	return CAutoCompleteWndBase::WindowProc(message, wParam, lParam);
 }
-

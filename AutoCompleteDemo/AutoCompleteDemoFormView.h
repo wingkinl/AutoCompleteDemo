@@ -2,7 +2,7 @@
 #include "afxwin.h"
 #include "afxcmn.h"
 
-class CDemoListCtrl : public CListCtrl
+class CDemoListCtrl : public CMFCListCtrl
 {
 	DECLARE_DYNCREATE(CDemoListCtrl)
 public:
@@ -32,7 +32,14 @@ public:
 protected:
 	void PostNcDestroy() override;
 
-	BOOL GetInitInfo(AUTOCNMHDR* nmhdr) const;
+	BOOL GetACInitInfo(AUTOCNMHDR* nmhdr);
+	BOOL GetACDisplayInfo(AUTOCNMHDR* nmhdr) const;
+	BOOL HandleKey(AUTOCNMHDR* nmhdr);
+	BOOL AutoComplete(AUTOCNMHDR* nmhdr);
+protected:
+	int UpdateFilteredList(LPCTSTR pszText);
+protected:
+	CArray<int>		m_arrFilteredIndices;
 protected:
 	afx_msg void OnChar(UINT nChar, UINT nRepCnt, UINT nFlags);
 	afx_msg LRESULT OnACNotify(WPARAM wp, LPARAM lp);

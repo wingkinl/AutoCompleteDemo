@@ -29,11 +29,6 @@ CSyncPopupWnd* CSyncPopupWnd::GetSafeActivePopup()
 	return NULL;
 }
 
-CSize CSyncPopupWnd::CalcSize() const
-{
-	return CSize(DEFAULT_SYNC_WND_SIZE, DEFAULT_SYNC_WND_SIZE);
-}
-
 void CSyncPopupWnd::PostNcDestroy()
 {
 	delete this;
@@ -59,7 +54,6 @@ BOOL CSyncPopupWnd::Create(CWnd* pOwner, POINT pos)
 		dwStyle, rect, pOwner, 0);
 	if (!bCreated)
 		return FALSE;
-	SetWindowPos(&wndTop, -1, -1, -1, -1, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
 	return TRUE;
 }
 
@@ -87,8 +81,6 @@ int CSyncPopupWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	if (nRet != 0)
 		return nRet;
 	m_pActivePopupWnd = this;
-	CSize size = CalcSize();
-	SetWindowPos(NULL, -1, -1, size.cx, size.cy, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
 	return 0;
 }
 
