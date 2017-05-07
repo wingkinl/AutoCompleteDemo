@@ -28,7 +28,7 @@ struct AUTOCINITINFO
 {
 	AUTOCNMHDR	hdr;
 	POINT		posACWndScreen;	// the initial position of the auto complete window
-	int			nListItems;		// the number of items in the list
+	int			nItemCount;		// the number of items in the list
 	int			nPreSelectItem;	// the item to be selected when display
 	int			nMaxVisibleItems;
 	EditPosLen	nPosStartChar;	// the position of the first character in editor

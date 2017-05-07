@@ -72,6 +72,9 @@
     <ClInclude Include="SyncPopupFrameImpl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AutoCompleteDemoEdit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AutoCompleteDemo.cpp">
@@ -123,6 +126,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SyncPopupFrameImpl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AutoCompleteDemoEdit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

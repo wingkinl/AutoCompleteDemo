@@ -1,6 +1,7 @@
 #pragma once
 #include "afxwin.h"
 #include "afxcmn.h"
+#include "AutoCompleteDemoEdit.h"
 
 class CDemoListCtrl : public CMFCListCtrl
 {
@@ -15,34 +16,6 @@ protected:
 	afx_msg void OnBeginLabelEdit(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnEndLabelEdit(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnLButtonDblClk(UINT nFlags, CPoint point);
-protected:
-	DECLARE_MESSAGE_MAP()
-};
-
-struct AUTOCNMHDR;
-
-class CDemoEdit : public CEdit
-{
-	DECLARE_DYNCREATE(CDemoEdit)
-public:
-	CDemoEdit();
-	~CDemoEdit();
-public:
-	bool m_bAutoDelete;
-protected:
-	void PostNcDestroy() override;
-
-	BOOL GetACInitInfo(AUTOCNMHDR* nmhdr);
-	BOOL GetACDisplayInfo(AUTOCNMHDR* nmhdr) const;
-	BOOL HandleKey(AUTOCNMHDR* nmhdr);
-	BOOL AutoComplete(AUTOCNMHDR* nmhdr);
-protected:
-	int UpdateFilteredList(LPCTSTR pszText);
-protected:
-	CArray<int>		m_arrFilteredIndices;
-protected:
-	afx_msg void OnChar(UINT nChar, UINT nRepCnt, UINT nFlags);
-	afx_msg LRESULT OnACNotify(WPARAM wp, LPARAM lp);
 protected:
 	DECLARE_MESSAGE_MAP()
 };
@@ -76,8 +49,8 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 public:
-	CDemoEdit m_editSingleLine;
-	CDemoEdit m_editMultiLine;
+	CDemoACEdit m_editSingleLine;
+	CDemoACEdit m_editMultiLine;
 	CDemoListCtrl m_listctrl;
 };
 

@@ -1,6 +1,5 @@
 #pragma once
 
-
 // CAutoCompleteListCtrl
 
 typedef CListCtrl	CAutoCompleteListCtrlBase;

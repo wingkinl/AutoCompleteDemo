@@ -237,8 +237,8 @@ BOOL CAutoCompleteWnd::Create(CWnd* pOwner, const AUTOCINITINFO& info)
 	m_infoInit = info;
 	if (info.pImageList)
 		SetImageList(info.pImageList);
-	UpdateListItemCount(info.nListItems);
-	m_listCtrl->SetCurSel(info.nPreSelectItem);
+	UpdateListItemCount(info.nItemCount);
+	m_listCtrl->SetCurSel(info.nPreSelectItem < info.nItemCount ?  info.nPreSelectItem : 0);
 	m_bReady = true;
 	ModifyStyleEx(0, WS_EX_LAYERED);
 	return bCreated;
@@ -345,7 +345,7 @@ BOOL CAutoCompleteWnd::Activate(CWnd* pOwner, UINT nChar)
 	AUTOCINITINFO info = {0};
 	info.nMaxVisibleItems = AC_DEFAULT_MAX_VISIBLE_ITEM;
 	info.bDropRestOfWord = TRUE;
-	if ( NotifyOwnerImpl(pOwner, ACCmdGetInitInfo, (AUTOCNMHDR*)&info) == 0 || info.nListItems <= 0 )
+	if ( NotifyOwnerImpl(pOwner, ACCmdGetInitInfo, (AUTOCNMHDR*)&info) == 0 || info.nItemCount <= 0 )
 		return FALSE;
 	CAutoCompleteWnd* pACWnd = new CAutoCompleteWnd;
 	BOOL bCreated = pACWnd->Create(pOwner, info);
@@ -680,17 +680,14 @@ BOOL CAutoCompleteWnd::NotifyKey(UINT nKey)
 	info.bEatKey = FALSE;
 	info.bClose = TRUE;
 	NotifyOwner(ACCmdKey, (AUTOCNMHDR*)&info);
-	if (info.bClose)
+	if (info.bClose || info.nItemCount == 0)
 	{
 		Close();
 	}
 	else
 	{
-		if (info.nItemCount >= 0)
-		{
-			UpdateListItemCount(info.nItemCount);
-			m_listCtrl->SetCurSel(info.nPreSelectItem);
-		}
+		UpdateListItemCount(info.nItemCount);
+		m_listCtrl->SetCurSel(info.nPreSelectItem < info.nItemCount ? info.nPreSelectItem : 0);
 	}
 	return info.bEatKey;
 }

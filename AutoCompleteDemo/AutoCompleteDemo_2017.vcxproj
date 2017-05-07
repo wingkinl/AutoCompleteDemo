@@ -192,6 +192,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AutoCompleteDemo.h" />
+    <ClInclude Include="AutoCompleteDemoEdit.h" />
     <ClInclude Include="AutoCompleteDemoEditDoc.h" />
     <ClInclude Include="AutoCompleteDemoEditView.h" />
     <ClInclude Include="AutoCompleteDemoFormDoc.h" />
@@ -213,6 +214,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AutoCompleteDemo.cpp" />
+    <ClCompile Include="AutoCompleteDemoEdit.cpp" />
     <ClCompile Include="AutoCompleteDemoEditDoc.cpp" />
     <ClCompile Include="AutoCompleteDemoEditView.cpp" />
     <ClCompile Include="AutoCompleteDemoFormDoc.cpp" />
