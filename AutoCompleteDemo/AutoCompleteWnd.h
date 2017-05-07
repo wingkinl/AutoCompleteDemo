@@ -160,6 +160,8 @@ protected:
 
 	void CustomDrawListImpl(CDC* pDC, LPNMLVCUSTOMDRAW plvcd);
 	void OnDrawLabel(CDC* pDC, LPNMLVCUSTOMDRAW plvcd, UINT nState, CRect& rect, BOOL bCalcOnly = FALSE);
+
+	BOOL HandleKeyUpdateTransparency();
 protected:
 	CAutoCompleteWnd();
 	virtual ~CAutoCompleteWnd();
@@ -171,6 +173,10 @@ protected:
 	int							m_nVisibleItems;
 	int							m_nMaxItemWidth;
 	bool						m_bReady;
+
+	BYTE						m_nAlpha;
+	bool						m_bIncreaseAlpha;
+	UINT_PTR					m_nAlphaTiimer;
 protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
@@ -178,6 +184,8 @@ protected:
 	afx_msg void OnCustomDrawList(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnGetListDispInfo(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnItemChangeList(NMHDR* pNMHDR, LRESULT* pResult);
+
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 
 	LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 protected:

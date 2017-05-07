@@ -18,6 +18,7 @@ BOOL CSyncPopupFrameImpl::PreTranslateMessage(MSG* pMsg)
 	{
 	case WM_SYSKEYDOWN:
 	case WM_KEYDOWN:
+	case WM_KEYUP:
 		//-----------------------------------------
 		// Pass keyboard action to the active menu:
 		//-----------------------------------------
