@@ -195,6 +195,9 @@ BEGIN
             MENUITEM "<placeholder>",               ID_VIEW_TOOLBAR
         END
         MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
+        MENUITEM SEPARATOR
+        MENUITEM "&Fuzzy Match",                ID_VIEW_FUZZYMATCH
+        MENUITEM "Match &Case",                 ID_VIEW_MATCHCASE
     END
     POPUP "&Window"
     BEGIN
@@ -553,6 +556,12 @@ END
 STRINGTABLE
 BEGIN
     IDS_EDIT_MENU           "Edit"
+END
+
+STRINGTABLE
+BEGIN
+    ID_VIEW_MATCHCASE       "Case sensitive match\nCase sensitive match"
+    ID_VIEW_FUZZYMATCH      "Fuzzy match\nFuzzy match"
 END
 
 #endif    // English (United States) resources

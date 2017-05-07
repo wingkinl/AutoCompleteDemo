@@ -33,6 +33,8 @@ public:
 	bool	m_bDuringInit;
 
 	CStringArray	m_saTestList;
+	bool			m_bMatchCase;
+	bool			m_bFuzzyMatch;
 
 	virtual void PreLoadState();
 	virtual void LoadCustomState();
@@ -40,6 +42,12 @@ public:
 
 	afx_msg void OnFileNew();
 	afx_msg void OnAppAbout();
+
+	afx_msg void OnFuzzyMatch();
+	afx_msg void OnUpdateFuzzyMatch(CCmdUI* pCmdUI);
+	afx_msg void OnMatchCase();
+	afx_msg void OnUpdateMatchCase(CCmdUI* pCmdUI);
+
 	DECLARE_MESSAGE_MAP()
 };
 

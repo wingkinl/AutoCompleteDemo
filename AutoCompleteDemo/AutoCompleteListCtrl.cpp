@@ -62,13 +62,14 @@ void CAutoCompleteListCtrl::SetShowVScrollBar(BOOL bShow)
 	m_bShowVScroll = bShow;
 }
 
-void CAutoCompleteListCtrl::HitTestSelectItem(const POINT& point)
+int CAutoCompleteListCtrl::HitTestSelectItem(const POINT& point)
 {
 	// We must take control of selection to prevent this window activating
 	// the popup
 	int nItem = HitTest(point);
 	if (nItem >= 0)
 		SetCurSel(nItem);
+	return nItem;
 }
 
 void CAutoCompleteListCtrl::PostNcDestroy()
@@ -81,7 +82,6 @@ BEGIN_MESSAGE_MAP(CAutoCompleteListCtrl, CAutoCompleteListCtrlBase)
 	ON_WM_MOUSEACTIVATE()
 	ON_WM_LBUTTONDOWN()
 	ON_WM_LBUTTONUP()
-	ON_WM_LBUTTONDBLCLK()
 	ON_WM_RBUTTONDOWN()
 	ON_WM_RBUTTONDBLCLK()
 	ON_WM_MBUTTONDOWN()
@@ -117,11 +117,6 @@ void CAutoCompleteListCtrl::OnLButtonDown(UINT nFlags, CPoint point)
 }
 
 void CAutoCompleteListCtrl::OnLButtonUp(UINT nFlags, CPoint point)
-{
-
-}
-
-void CAutoCompleteListCtrl::OnLButtonDblClk(UINT nFlags, CPoint point)
 {
 
 }

@@ -27,14 +27,15 @@ BEGIN_MESSAGE_MAP(CAutoCompleteDemoRichEditView, CRichEditView)
 	ON_WM_DESTROY()
 	ON_WM_CONTEXTMENU()
 	ON_WM_RBUTTONUP()
+	ON_WM_CHAR()
+	ON_MESSAGE(WM_AC_NOTIFY, &OnACNotify)
 END_MESSAGE_MAP()
 
 // CAutoCompleteDemoRichEditView construction/destruction
 
 CAutoCompleteDemoRichEditView::CAutoCompleteDemoRichEditView()
 {
-	// TODO: add construction code here
-
+	m_acImp.m_pEdit = (CEdit*)&GetRichEditCtrl();
 }
 
 CAutoCompleteDemoRichEditView::~CAutoCompleteDemoRichEditView()
@@ -108,3 +109,13 @@ CAutoCompleteDemoRichEditDoc* CAutoCompleteDemoRichEditView::GetDocument() const
 
 
 // CAutoCompleteDemoRichEditView message handlers
+void CAutoCompleteDemoRichEditView::OnChar(UINT nChar, UINT nRepCnt, UINT nFlags)
+{
+	CRichEditView::OnChar(nChar, nRepCnt, nFlags);
+	CAutoCompleteWnd::Activate(this, nChar);
+}
+
+LRESULT CAutoCompleteDemoRichEditView::OnACNotify(WPARAM wp, LPARAM lp)
+{
+	return m_acImp.OnACNotify(wp, lp);
+}

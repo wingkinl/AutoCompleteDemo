@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "AutoCompleteDemoEdit.h"
 
 class CAutoCompleteDemoCntrItem;
 
@@ -34,13 +35,16 @@ public:
 #endif
 
 protected:
-
+	CDemoEditACImp	m_acImp;
 // Generated message map functions
 protected:
 	afx_msg void OnDestroy();
 	afx_msg void OnFilePrintPreview();
 	afx_msg void OnRButtonUp(UINT nFlags, CPoint point);
 	afx_msg void OnContextMenu(CWnd* pWnd, CPoint point);
+
+	afx_msg void OnChar(UINT nChar, UINT nRepCnt, UINT nFlags);
+	afx_msg LRESULT OnACNotify(WPARAM wp, LPARAM lp);
 	DECLARE_MESSAGE_MAP()
 };
 

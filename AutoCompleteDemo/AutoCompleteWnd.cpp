@@ -14,7 +14,8 @@
 
 CWindowACImp::CWindowACImp()
 {
-	
+	m_bMatchCase = false;
+	m_bFuzzyMatch = true;
 }
 
 CWindowACImp::~CWindowACImp()
@@ -27,7 +28,7 @@ BOOL CWindowACImp::IsValidChar(UINT nChar) const
 	return _istalnum(nChar);
 }
 
-BOOL CWindowACImp::HandleKey(AUTOCKEYINFO* pInfo, CString& strText) const
+BOOL CWindowACImp::HandleKey(AUTOCKEYINFO* pInfo, CString& strText)
 {
 	BOOL bIsValid = TRUE;
 	switch (pInfo->nKey)
@@ -59,6 +60,118 @@ BOOL CWindowACImp::HandleKey(AUTOCKEYINFO* pInfo, CString& strText) const
 	return bIsValid;
 }
 
+LRESULT CWindowACImp::OnACNotify(WPARAM wp, LPARAM lp)
+{
+	ACCmd cmd = (ACCmd)wp;
+	AUTOCNMHDR* nmhdr = (AUTOCNMHDR*)lp;
+
+	switch (cmd)
+	{
+	case ACCmdGetInitInfo:
+		{
+			AUTOCINITINFO* pInfo = (AUTOCINITINFO*)nmhdr;
+			BOOL bRet = GetInitInfo(pInfo);
+			if (bRet)
+			{
+				pInfo->nItemCount = UpdateFilteredList((LPCTSTR)pInfo->strStart);
+			}
+			return bRet;
+		}
+	case ACCmdGetListDispInfo:
+		return (LRESULT)GetDisplayInfo(nmhdr);
+	case ACCmdKey:
+		{
+			AUTOCKEYINFO* pInfo = (AUTOCKEYINFO*)nmhdr;
+			CString strText;
+			BOOL bIsValid = HandleKey(pInfo, strText);
+			if (bIsValid)
+			{
+				pInfo->nItemCount = UpdateFilteredList((LPCTSTR)strText);
+				pInfo->bClose = FALSE;
+			}
+			if (!bIsValid)
+			{
+				pInfo->bClose = TRUE;
+			}
+			pInfo->bEatKey = FALSE;
+			return TRUE;
+		}
+	case ACCmdComplete:
+		return (LRESULT)AutoComplete((AUTOCCOMPLETE*)nmhdr);
+	}
+	return 0;
+}
+
+LPCTSTR CWindowACImp::GetItemDisplayText(int nItem) const
+{
+	return nullptr;
+}
+
+int CWindowACImp::GetItemIconIndex(int nItem) const
+{
+	return -1;
+}
+
+BOOL CWindowACImp::GetDisplayInfo(AUTOCNMHDR* nmhdr) const
+{
+	AUTOCDISPINFO* pInfo = (AUTOCDISPINFO*)nmhdr;
+	AUTOCITEM& item = pInfo->item;
+	if (item.mask & AUTOCITEM::ACIF_TEXT)
+	{
+		int nMappedItem = item.nItem;
+		if (nMappedItem < m_arrFilteredIndices.GetSize())
+			nMappedItem = m_arrFilteredIndices[nMappedItem];
+		_tcsncpy(item.pszText, GetItemDisplayText(nMappedItem), item.cchTextMax);
+	}
+	if (item.mask & AUTOCITEM::ACIF_IMAGE)
+	{
+		item.nImaage = GetItemIconIndex(item.nItem);
+	}
+	return TRUE;
+}
+
+int CWindowACImp::UpdateFilteredList(LPCTSTR pszFilterText)
+{
+	m_arrFilteredIndices.RemoveAll();
+	int nItemCount = GetTotalItemCount();
+	if (pszFilterText && *pszFilterText)
+	{
+		int nTextLen = (int)_tcslen(pszFilterText);
+		for (int ii = 0; ii < nItemCount; ++ii)
+		{
+			LPCTSTR pszItemText = GetItemDisplayText(ii);
+			bool bMatch = false;
+			if (m_bFuzzyMatch)
+			{
+				auto pfnStrChr = m_bMatchCase ? StrChr : StrChrI;
+				for (int nChar = 0; nChar < nTextLen; ++nChar)
+				{
+					pszItemText = pfnStrChr(pszItemText, pszFilterText[nChar]);
+					if (!pszItemText)
+						break;
+					if (*++pszItemText == _T('\0'))
+					{
+						if (nChar != nTextLen - 1)
+							pszItemText = nullptr;
+						break;
+					}
+				}
+				bMatch = pszItemText != nullptr;
+			}
+			else
+			{
+				auto pfnCmp = m_bMatchCase ? _tcsnccmp : _tcsncicmp;
+				bMatch = pfnCmp(pszItemText, pszFilterText, nTextLen) == 0;
+			}
+			if (bMatch)
+			{
+				m_arrFilteredIndices.Add(ii);
+			}
+		}
+	}
+	return (int)m_arrFilteredIndices.GetSize();
+}
+
 CEditACImp::CEditACImp()
 {
 
@@ -69,7 +182,7 @@ CEditACImp::~CEditACImp()
 
 }
 
-BOOL CEditACImp::GetInitInfo(AUTOCINITINFO* pInfo) const
+BOOL CEditACImp::GetInitInfo(AUTOCINITINFO* pInfo)
 {
 	int nSelStartChar = 0, nSelEndChar = 0;
 	m_pEdit->GetSel(nSelStartChar, nSelEndChar);
@@ -137,7 +250,7 @@ BOOL CEditACImp::GetInitInfo(AUTOCINITINFO* pInfo) const
 	return !pInfo->strStart.IsEmpty();
 }
 
-BOOL CEditACImp::AutoComplete(AUTOCCOMPLETE* pInfo) const
+BOOL CEditACImp::AutoComplete(AUTOCCOMPLETE* pInfo)
 {
 	int nEndChar = GetCaretPos();
 	if (pInfo->bDropRestOfWord)
@@ -222,7 +335,8 @@ BEGIN_MESSAGE_MAP(CAutoCompleteWnd, CAutoCompleteWndBase)
 	ON_WM_SIZE()
 	ON_NOTIFY(NM_CUSTOMDRAW, IDC_AUTO_LIST_CTRL, &CAutoCompleteWnd::OnCustomDrawList)
 	ON_NOTIFY(LVN_GETDISPINFO, IDC_AUTO_LIST_CTRL, &CAutoCompleteWnd::OnGetListDispInfo)
-	ON_NOTIFY(LVN_ITEMCHANGED, IDC_AUTO_LIST_CTRL, &CAutoCompleteWnd::OnItemChangeList)
+	ON_NOTIFY(LVN_ITEMCHANGED, IDC_AUTO_LIST_CTRL, &CAutoCompleteWnd::OnListItemChange)
+	ON_NOTIFY(NM_DBLCLK, IDC_AUTO_LIST_CTRL, &CAutoCompleteWnd::OnListDblClk)
 	ON_WM_TIMER()
 END_MESSAGE_MAP()
 
@@ -457,7 +571,7 @@ void CAutoCompleteWnd::OnGetListDispInfo(NMHDR* pNMHDR, LRESULT* pResult)
 	*pResult = 0;
 }
 
-void CAutoCompleteWnd::OnItemChangeList(NMHDR* pNMHDR, LRESULT* pResult)
+void CAutoCompleteWnd::OnListItemChange(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	NM_LISTVIEW* pNMLV = (NM_LISTVIEW*)pNMHDR;
 	if ( m_bReady && (pNMLV->uChanged & LVIF_STATE) && (pNMLV->uNewState & LVIS_SELECTED) )
@@ -466,6 +580,15 @@ void CAutoCompleteWnd::OnItemChangeList(NMHDR* pNMHDR, LRESULT* pResult)
 		PrepareNotifyHeader((AUTOCNMHDR*)&info);
 		info.wp = (WPARAM)pNMLV->iItem;
 		NotifyOwner(ACCmdSelChange, (AUTOCNMHDR*)&info);
+	}
+}
+
+void CAutoCompleteWnd::OnListDblClk(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	NMITEMACTIVATE* pItemActivate = (NMITEMACTIVATE*)pNMHDR;
+	if (pItemActivate->iItem >= 0)
+	{
+		DoAutoCompletion();
 	}
 }
 

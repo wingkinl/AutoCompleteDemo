@@ -86,14 +86,30 @@ public:
 	CWindowACImp();
 	virtual ~CWindowACImp();
 
-	virtual BOOL GetInitInfo(AUTOCINITINFO* pInfo) const = 0;
+	virtual BOOL GetInitInfo(AUTOCINITINFO* pInfo) = 0;
 	virtual BOOL IsValidChar(UINT nChar) const;
 
-	virtual BOOL HandleKey(AUTOCKEYINFO* pInfo, CString& strText) const;
-	virtual BOOL AutoComplete(AUTOCCOMPLETE* pInfo) const = 0;
+	virtual BOOL HandleKey(AUTOCKEYINFO* pInfo, CString& strText);
+	virtual BOOL AutoComplete(AUTOCCOMPLETE* pInfo) = 0;
 
 	virtual BOOL GetRangeText(CString& strText, EditPosLen nStart, EditPosLen nEnd) const = 0;
 	virtual EditPosLen GetCaretPos() const = 0;
+
+	virtual LRESULT OnACNotify(WPARAM wp, LPARAM lp);
+
+	virtual int GetTotalItemCount() const = 0;
+
+	virtual LPCTSTR GetItemDisplayText(int nItem) const;
+	virtual int GetItemIconIndex(int nItem) const;
+
+	virtual BOOL GetDisplayInfo(AUTOCNMHDR* nmhdr) const;
+
+	virtual int UpdateFilteredList(LPCTSTR pszFilterText);
+protected:
+	CArray<int>		m_arrFilteredIndices;
+public:
+	bool			m_bMatchCase;
+	bool			m_bFuzzyMatch;
 };
 
 class CEditACImp : public CWindowACImp
@@ -102,8 +118,8 @@ public:
 	CEditACImp();
 	virtual ~CEditACImp();
 
-	virtual BOOL GetInitInfo(AUTOCINITINFO* pInfo) const;
-	BOOL AutoComplete(AUTOCCOMPLETE* pInfo) const override;
+	BOOL GetInitInfo(AUTOCINITINFO* pInfo) override;
+	BOOL AutoComplete(AUTOCCOMPLETE* pInfo) override;
 
 	BOOL		GetRangeText(CString& strText, EditPosLen nStart, EditPosLen nEnd) const override;
 	EditPosLen	GetCaretPos() const override;
@@ -183,7 +199,8 @@ protected:
 
 	afx_msg void OnCustomDrawList(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnGetListDispInfo(NMHDR* pNMHDR, LRESULT* pResult);
-	afx_msg void OnItemChangeList(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnListItemChange(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnListDblClk(NMHDR* pNMHDR, LRESULT* pResult);
 
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 

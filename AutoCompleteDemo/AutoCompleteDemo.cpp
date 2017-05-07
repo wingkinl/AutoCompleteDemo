@@ -30,6 +30,10 @@ BEGIN_MESSAGE_MAP(CAutoCompleteDemoApp, CWinAppEx)
 	// Standard file based document commands
 	ON_COMMAND(ID_FILE_NEW, &CAutoCompleteDemoApp::OnFileNew)
 	ON_COMMAND(ID_FILE_OPEN, &CWinAppEx::OnFileOpen)
+	ON_COMMAND(ID_VIEW_FUZZYMATCH, &OnFuzzyMatch)
+	ON_UPDATE_COMMAND_UI(ID_VIEW_FUZZYMATCH, &OnUpdateFuzzyMatch)
+	ON_COMMAND(ID_VIEW_MATCHCASE, &OnMatchCase)
+	ON_UPDATE_COMMAND_UI(ID_VIEW_MATCHCASE, &OnUpdateMatchCase)
 END_MESSAGE_MAP()
 
 
@@ -47,6 +51,8 @@ CAutoCompleteDemoApp::CAutoCompleteDemoApp()
 	m_hSciDLL = nullptr;
 #endif // _ENABLE_SCINTILLA_BUILD
 	m_bDuringInit = true;
+	m_bMatchCase = false;
+	m_bFuzzyMatch = true;
 }
 
 // The one and only CAutoCompleteDemoApp object
@@ -277,6 +283,26 @@ void CAutoCompleteDemoApp::OnAppAbout()
 {
 	CAboutDlg aboutDlg;
 	aboutDlg.DoModal();
+}
+
+void CAutoCompleteDemoApp::OnFuzzyMatch()
+{
+	m_bFuzzyMatch = !m_bFuzzyMatch;
+}
+
+void CAutoCompleteDemoApp::OnUpdateFuzzyMatch(CCmdUI* pCmdUI)
+{
+	pCmdUI->SetCheck(m_bFuzzyMatch);
+}
+
+void CAutoCompleteDemoApp::OnMatchCase()
+{
+	m_bMatchCase = !m_bMatchCase;
+}
+
+void CAutoCompleteDemoApp::OnUpdateMatchCase(CCmdUI* pCmdUI)
+{
+	pCmdUI->SetCheck(m_bMatchCase);
 }
 
 // CAutoCompleteDemoApp customization load/save methods
