@@ -35,7 +35,8 @@ END_MESSAGE_MAP()
 
 CAutoCompleteDemoRichEditView::CAutoCompleteDemoRichEditView()
 {
-	m_acImp.m_pEdit = (CEdit*)&GetRichEditCtrl();
+	m_acImp.m_pEdit = &GetRichEditCtrl();
+	m_acImp.m_bIsRichEdit = true;
 }
 
 CAutoCompleteDemoRichEditView::~CAutoCompleteDemoRichEditView()

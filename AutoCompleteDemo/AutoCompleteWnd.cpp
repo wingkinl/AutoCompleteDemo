@@ -174,7 +174,7 @@ int CWindowACImp::UpdateFilteredList(LPCTSTR pszFilterText)
 
 CEditACImp::CEditACImp()
 {
-
+	m_bIsRichEdit = false;
 }
 
 CEditACImp::~CEditACImp()
@@ -185,18 +185,17 @@ CEditACImp::~CEditACImp()
 BOOL CEditACImp::GetInitInfo(AUTOCINITINFO* pInfo)
 {
 	int nSelStartChar = 0, nSelEndChar = 0;
-	m_pEdit->GetSel(nSelStartChar, nSelEndChar);
+	GetSel(nSelStartChar, nSelEndChar);
 
-	int nCurLine = m_pEdit->LineFromChar(nSelStartChar);
-	int nCurLineStartChar = m_pEdit->LineIndex(nCurLine);
+	int nCurLine = LineFromChar(nSelStartChar);
+	int nCurLineStartChar = LineIndex(nCurLine);
 	
 	ASSERT(nSelStartChar >= nCurLineStartChar);
 
-	int nLineLen = m_pEdit->LineLength(nCurLineStartChar);
+	int nLineLen = LineLength(nCurLineStartChar);
 	CString strLine;
-	auto pszLine = strLine.GetBuffer(nLineLen);
-	m_pEdit->GetLine(nCurLine, (LPTSTR)pszLine, nLineLen);
-	strLine.ReleaseBuffer();
+	GetLineText(nCurLine, strLine, nLineLen);
+	LPCTSTR pszLine = (LPCTSTR)strLine;
 
 	pInfo->strStart.Empty();
 
@@ -217,18 +216,18 @@ BOOL CEditACImp::GetInitInfo(AUTOCINITINFO* pInfo)
 	if (pInfo->nStartStrLen == 0)
 		return FALSE;
 	// note: PosFromChar returns top-left corner of a given character
-	pInfo->posACWndScreen = m_pEdit->PosFromChar(pInfo->nPosStartChar);
+	pInfo->posACWndScreen = PosFromChar(pInfo->nPosStartChar);
 	m_pEdit->ClientToScreen(&pInfo->posACWndScreen);
 
 	if (m_pEdit->GetStyle() & ES_MULTILINE)
 	{
 		// PosFromChar gives us top-left corner, but we need bottom left!
-		int nLineCount = m_pEdit->GetLineCount();
+		int nLineCount = GetLineCount();
 		if (nLineCount > 1)
 		{
 			int nNextPrevLine = nCurLine < nLineCount - 1 ? nCurLine + 1 : nCurLine - 1;
-			int nNextPrevLineCharPos = m_pEdit->LineIndex(nNextPrevLine);
-			CPoint posNextPrevLine = m_pEdit->PosFromChar(nNextPrevLineCharPos);
+			int nNextPrevLineCharPos = LineIndex(nNextPrevLine);
+			CPoint posNextPrevLine = PosFromChar(nNextPrevLineCharPos);
 			m_pEdit->ClientToScreen(&posNextPrevLine);
 			pInfo->posACWndScreen.y += abs(posNextPrevLine.y - pInfo->posACWndScreen.y);
 		}
@@ -255,16 +254,15 @@ BOOL CEditACImp::AutoComplete(AUTOCCOMPLETE* pInfo)
 	int nEndChar = GetCaretPos();
 	if (pInfo->bDropRestOfWord)
 	{
-		int nCurLine = m_pEdit->LineFromChar(nEndChar);
-		int nCurLineStartChar = m_pEdit->LineIndex(nCurLine);
+		int nCurLine = LineFromChar(nEndChar);
+		int nCurLineStartChar = LineIndex(nCurLine);
 
 		ASSERT(nEndChar >= nCurLineStartChar);
 
-		int nLineLen = m_pEdit->LineLength(nCurLineStartChar);
+		int nLineLen = LineLength(nCurLineStartChar);
 		CString strLine;
-		auto pszLine = strLine.GetBuffer(nLineLen);
-		m_pEdit->GetLine(nCurLine, (LPTSTR)pszLine, nLineLen);
-		strLine.ReleaseBuffer();
+		GetLineText(nCurLine, strLine, nLineLen);
+		LPCTSTR pszLine = (LPCTSTR)strLine;
 
 		int nCurCharOffset = nEndChar - nCurLineStartChar;
 		for (int nCharPos = nCurCharOffset; nCharPos < nLineLen; ++nCharPos)
@@ -276,23 +274,21 @@ BOOL CEditACImp::AutoComplete(AUTOCCOMPLETE* pInfo)
 			}
 		}
 	}
-	m_pEdit->SetSel(pInfo->nPosStartChar, nEndChar, TRUE);
-	m_pEdit->ReplaceSel(pInfo->strText);
+	SetSel(pInfo->nPosStartChar, nEndChar, TRUE);
+	ReplaceSel(pInfo->strText);
 	return TRUE;
 }
 
 BOOL CEditACImp::GetRangeText(CString& strText, EditPosLen nStart, EditPosLen nEnd) const
 {
-	int nCurLine = m_pEdit->LineFromChar(nStart);
-	int nCurLineStartChar = m_pEdit->LineIndex(nCurLine);
+	int nCurLine = LineFromChar(nStart);
+	int nCurLineStartChar = LineIndex(nCurLine);
 
 	ASSERT(nStart >= nCurLineStartChar);
 
-	int nLineLen = m_pEdit->LineLength(nCurLineStartChar);
+	int nLineLen = LineLength(nCurLineStartChar);
 	CString strLine;
-	auto pszLine = strLine.GetBuffer(nLineLen);
-	m_pEdit->GetLine(nCurLine, (LPTSTR)pszLine, nLineLen);
-	strLine.ReleaseBuffer();
+	GetLineText(nCurLine, strLine, nLineLen);
 	strText = strLine.Mid(nStart - nCurLineStartChar, nEnd - nStart);
 	return TRUE;
 }
@@ -300,8 +296,17 @@ BOOL CEditACImp::GetRangeText(CString& strText, EditPosLen nStart, EditPosLen nE
 EditPosLen CEditACImp::GetCaretPos() const
 {
 	int nSelStartChar = 0, nSelEndChar = 0;
-	m_pEdit->GetSel(nSelStartChar, nSelEndChar);
+	GetSel(nSelStartChar, nSelEndChar);
 	return (EditPosLen)nSelStartChar;
+}
+
+void CEditACImp::GetLineText(int nLineIndex, CString& strLine, int nLineLen) const
+{
+	auto pszLine = strLine.GetBufferSetLength(nLineLen + 1);
+	*(LPWORD)pszLine = (WORD)nLineLen;
+	GetLine(nLineIndex, (LPTSTR)pszLine);
+	strLine.SetAt(nLineLen, _T('\0'));
+	strLine.ReleaseBuffer(nLineLen + 1);
 }
 
 // CAutoCompleteWnd
@@ -401,6 +406,8 @@ int CAutoCompleteWnd::MoveSelection(int nDelta)
 		m_listCtrl->Scroll(szScroll);
 		RecalcSizeToFitList();
 	}
+	m_listCtrl->Invalidate();
+	m_listCtrl->UpdateWindow();
 	return nCurSelItem;
 }
 
@@ -810,7 +817,7 @@ BOOL CAutoCompleteWnd::NotifyKey(UINT nKey)
 	else
 	{
 		UpdateListItemCount(info.nItemCount);
-		m_listCtrl->SetCurSel(info.nPreSelectItem < info.nItemCount ? info.nPreSelectItem : 0);
+		m_listCtrl->SetCurSel(info.nPreSelectItem < info.nItemCount ? info.nPreSelectItem : m_listCtrl->GetTopIndex());
 	}
 	return info.bEatKey;
 }

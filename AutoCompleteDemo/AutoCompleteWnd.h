@@ -123,8 +123,81 @@ public:
 
 	BOOL		GetRangeText(CString& strText, EditPosLen nStart, EditPosLen nEnd) const override;
 	EditPosLen	GetCaretPos() const override;
+protected:
+	inline int GetLineCount() const
+	{
+		if (m_bIsRichEdit)
+			return ((CRichEditCtrl*)m_pEdit)->GetLineCount();
+		return ((CEdit*)m_pEdit)->GetLineCount();
+	}
+
+	inline void GetSel(int& nStartChar, int& nEndChar) const
+	{
+		if (m_bIsRichEdit)
+		{
+			long nStart, nEnd;
+			((CRichEditCtrl*)m_pEdit)->GetSel(nStart, nEnd);
+			nStartChar = nStart; nEndChar = nEnd;
+		}
+		else
+			((CEdit*)m_pEdit)->GetSel(nStartChar, nEndChar);
+	}
+
+	inline void SetSel(int nStartChar, int nEndChar, BOOL bNoScroll = FALSE)
+	{
+		if (m_bIsRichEdit)
+			((CRichEditCtrl*)m_pEdit)->SetSel(nStartChar, nEndChar);
+		else
+			((CEdit*)m_pEdit)->SetSel(nStartChar, nEndChar);
+	}
+
+	inline void ReplaceSel(LPCTSTR lpszNewText, BOOL bCanUndo = FALSE)
+	{
+		if (m_bIsRichEdit)
+			((CRichEditCtrl*)m_pEdit)->ReplaceSel(lpszNewText, bCanUndo);
+		else
+			((CEdit*)m_pEdit)->ReplaceSel(lpszNewText, bCanUndo);
+	}
+
+	inline CPoint PosFromChar(UINT nChar) const
+	{
+		if (m_bIsRichEdit)
+			return ((CRichEditCtrl*)m_pEdit)->PosFromChar(nChar);
+		return ((CEdit*)m_pEdit)->PosFromChar(nChar);
+	}
+
+	inline int LineFromChar(int nIndex = -1) const
+	{
+		if (m_bIsRichEdit)
+			return (int)((CRichEditCtrl*)m_pEdit)->LineFromChar(nIndex);
+		return ((CEdit*)m_pEdit)->LineFromChar(nIndex);
+	}
+
+	inline int LineIndex(int nLine = -1) const
+	{
+		if (m_bIsRichEdit)
+			return ((CRichEditCtrl*)m_pEdit)->LineIndex(nLine);
+		return ((CEdit*)m_pEdit)->LineIndex(nLine);
+	}
+
+	inline int LineLength(int nLine = -1) const
+	{
+		if (m_bIsRichEdit)
+			return ((CRichEditCtrl*)m_pEdit)->LineLength(nLine);
+		return ((CEdit*)m_pEdit)->LineLength(nLine);
+	}
+
+	inline int GetLine(int nIndex, LPTSTR lpszBuffer) const
+	{
+		if (m_bIsRichEdit)
+			return ((CRichEditCtrl*)m_pEdit)->GetLine(nIndex, lpszBuffer);
+		return ((CEdit*)m_pEdit)->GetLine(nIndex, lpszBuffer);
+	}
+
+	void GetLineText(int nLineIndex, CString& strLine, int nLineLen) const;
 public:
-	CEdit*	m_pEdit;
+	CWnd*	m_pEdit;
+	bool	m_bIsRichEdit;
 };
 
 
