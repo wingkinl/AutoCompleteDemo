@@ -95,7 +95,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Link>
@@ -118,7 +118,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Link>
@@ -143,7 +143,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Link>
@@ -170,7 +170,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Link>
@@ -192,6 +192,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AutoCompleteDemo.h" />
+    <ClInclude Include="AutoCompleteDemoEdit.h" />
     <ClInclude Include="AutoCompleteDemoEditDoc.h" />
     <ClInclude Include="AutoCompleteDemoEditView.h" />
     <ClInclude Include="AutoCompleteDemoFormDoc.h" />
@@ -200,16 +201,22 @@
     <ClInclude Include="AutoCompleteDemoRichEditView.h" />
     <ClInclude Include="AutoCompleteDemoScintillaDoc.h" />
     <ClInclude Include="AutoCompleteDemoScintillaView.h" />
+    <ClInclude Include="AutoCompleteListCtrl.h" />
     <ClInclude Include="AutoCompleteWnd.h" />
     <ClInclude Include="ChildFrm.h" />
     <ClInclude Include="CntrItem.h" />
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="ScintillaWrapper\ScintillaCtrl.h" />
+    <ClInclude Include="ScintillaWrapper\ScintillaDocView.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="SyncPopupFrameImpl.h" />
+    <ClInclude Include="SyncPopupWnd.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AutoCompleteDemo.cpp" />
+    <ClCompile Include="AutoCompleteDemoEdit.cpp" />
     <ClCompile Include="AutoCompleteDemoEditDoc.cpp" />
     <ClCompile Include="AutoCompleteDemoEditView.cpp" />
     <ClCompile Include="AutoCompleteDemoFormDoc.cpp" />
@@ -218,16 +225,21 @@
     <ClCompile Include="AutoCompleteDemoRichEditView.cpp" />
     <ClCompile Include="AutoCompleteDemoScintillaDoc.cpp" />
     <ClCompile Include="AutoCompleteDemoScintillaView.cpp" />
+    <ClCompile Include="AutoCompleteListCtrl.cpp" />
     <ClCompile Include="AutoCompleteWnd.cpp" />
     <ClCompile Include="ChildFrm.cpp" />
     <ClCompile Include="CntrItem.cpp" />
     <ClCompile Include="MainFrm.cpp" />
+    <ClCompile Include="ScintillaWrapper\ScintillaCtrl.cpp" />
+    <ClCompile Include="ScintillaWrapper\ScintillaDocView.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="SyncPopupFrameImpl.cpp" />
+    <ClCompile Include="SyncPopupWnd.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="AutoCompleteDemo.rc" />
