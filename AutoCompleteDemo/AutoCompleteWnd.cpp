@@ -336,6 +336,7 @@ CScintillaACImp::~CScintillaACImp()
 
 BOOL CScintillaACImp::GetInitInfo(AUTOCINITINFO* pInfo)
 {
+
 	return TRUE;
 }
 
@@ -448,7 +449,6 @@ int CAutoCompleteWnd::MoveSelection(int nDelta)
 	int nCurSelItem = m_listCtrl->MoveSelection(nDelta);
 	if (nCurSelItem < nTopItemIndex || nCurSelItem >= nTopItemIndex + GetVisibleItems())
 	{
-		// TODO
 		//m_listCtrl->EnsureVisible(nCurSelItem, FALSE);
 		CSize szScroll(0, m_listCtrl->GetItemHeight()* (nCurSelItem-nOldSelItem));
 		m_listCtrl->Scroll(szScroll);
@@ -467,6 +467,8 @@ void CAutoCompleteWnd::DoAutoCompletion()
 	info.bDropRestOfWord = m_infoInit.bDropRestOfWord;
 	info.nItem = m_listCtrl->GetCurSel();
 	info.strText = m_listCtrl->GetItemText(info.nItem, 0);
+	m_listCtrl->GetItemRect(info.nItem, &info.rcItemScreen, LVIR_BOUNDS);
+	m_listCtrl->ClientToScreen(&info.rcItemScreen);
 	NotifyOwner(ACCmdComplete, (AUTOCNMHDR*)&info);
 	Close();
 }
@@ -632,9 +634,11 @@ void CAutoCompleteWnd::OnListItemChange(NMHDR* pNMHDR, LRESULT* pResult)
 	NM_LISTVIEW* pNMLV = (NM_LISTVIEW*)pNMHDR;
 	if ( m_bReady && (pNMLV->uChanged & LVIF_STATE) && (pNMLV->uNewState & LVIS_SELECTED) )
 	{
-		AUTOCNMHDR info = { 0 };
+		AUTOCSELCHANGEINFO info = { 0 };
 		PrepareNotifyHeader((AUTOCNMHDR*)&info);
-		info.wp = (WPARAM)pNMLV->iItem;
+		info.nItem = pNMLV->iItem;
+		m_listCtrl->GetItemRect(info.nItem, &info.rcItemScreen, LVIR_BOUNDS);
+		m_listCtrl->ClientToScreen(&info.rcItemScreen);
 		NotifyOwner(ACCmdSelChange, (AUTOCNMHDR*)&info);
 	}
 }

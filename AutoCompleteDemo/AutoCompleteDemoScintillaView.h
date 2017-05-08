@@ -23,7 +23,12 @@ public:
 	virtual void Dump(CDumpContext& dc) const;
 #endif
 #endif
+	void OnCharAdded(SCNotification* pSCNotification) override;
+protected:
 	CDemoScintillaACImp	m_acImp;
+protected:
+	afx_msg void OnChar(UINT nChar, UINT nRepCnt, UINT nFlags);
+	afx_msg LRESULT OnACNotify(WPARAM wp, LPARAM lp);
 protected:
 	DECLARE_MESSAGE_MAP()
 };

@@ -20,6 +20,8 @@ CAutoCompleteDemoScintillaView::~CAutoCompleteDemoScintillaView()
 }
 
 BEGIN_MESSAGE_MAP(CAutoCompleteDemoScintillaView, CAutoCompleteDemoScintillaViewBase)
+	ON_WM_CHAR()
+	ON_MESSAGE(WM_AC_NOTIFY, &CAutoCompleteDemoScintillaView::OnACNotify)
 END_MESSAGE_MAP()
 
 
@@ -49,7 +51,24 @@ void CAutoCompleteDemoScintillaView::Dump(CDumpContext& dc) const
 #endif //_DEBUG
 
 
+void CAutoCompleteDemoScintillaView::OnChar(UINT nChar, UINT nRepCnt, UINT nFlags)
+{
+	CAutoCompleteDemoScintillaViewBase::OnChar(nChar, nRepCnt, nFlags);
+	CAutoCompleteWnd::Activate(this, nChar);
+}
+
+void CAutoCompleteDemoScintillaView::OnCharAdded(SCNotification* pSCNotification)
+{
+	CAutoCompleteDemoScintillaViewBase::OnCharAdded(pSCNotification);
+	CAutoCompleteWnd::Activate(this, pSCNotification->ch);
+}
+
 // CAutoCompleteDemoScintillaView message handlers
+
+LRESULT CAutoCompleteDemoScintillaView::OnACNotify(WPARAM wp, LPARAM lp)
+{
+	return m_acImp.OnACNotify(wp, lp);
+}
 
 
 #endif // _ENABLE_SCINTILLA_BUILD

@@ -244,12 +244,6 @@ BOOL CAutoCompleteDemoApp::InitInstance()
 				{
 					m_saTestList.Add(fd.cFileName);
 					m_imgList.Add(hIcon);
-
-					if (_tcscmp(fd.cFileName, _T("xwizard.exe")) == 0)
-					{
-						CClientDC dc(NULL);
-						m_imgList.Draw(&dc, m_imgList.GetImageCount()-1, CPoint(100, 100), ILD_TRANSPARENT);
-					}
 					DestroyIcon(hIcon);
 				}
 			} while (FindNextFile(hFind, &fd));

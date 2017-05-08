@@ -28,6 +28,7 @@ struct AUTOCINITINFO
 {
 	AUTOCNMHDR	hdr;
 	POINT		posACWndScreen;	// the initial position of the auto complete window
+	RECT		rcScreen;
 	int			nItemCount;		// the number of items in the list
 	int			nPreSelectItem;	// the item to be selected when display
 	int			nMaxVisibleItems;
@@ -71,12 +72,20 @@ struct AUTOCKEYINFO
 	BOOL		bClose;		// whether to close the window
 };
 
+struct AUTOCSELCHANGEINFO 
+{
+	AUTOCNMHDR	hdr;
+	int			nItem;
+	RECT		rcItemScreen;
+};
+
 struct AUTOCCOMPLETE 
 {
 	AUTOCNMHDR	hdr;
 	EditPosLen	nPosStartChar;
 	BOOL		bDropRestOfWord;
 	int			nItem;
+	RECT		rcItemScreen;
 	CString		strText;
 };
 
