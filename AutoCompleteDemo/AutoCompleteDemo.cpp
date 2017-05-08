@@ -88,6 +88,21 @@ HMODULE LoadLibraryFromApplicationDirectory(LPCTSTR lpFileName)
 
 // CAutoCompleteDemoApp initialization
 
+HICON GetAssociatedFileIcon(LPCTSTR lpctszFilePath)
+{
+	SHFILEINFO shFileInfo = { 0 };
+
+	// For retrieving icon
+	SHGetFileInfo(lpctszFilePath,
+		FILE_ATTRIBUTE_NORMAL,
+		&shFileInfo,
+		sizeof(shFileInfo),
+		SHGFI_SMALLICON | SHGFI_ICON | SHGFI_USEFILEATTRIBUTES);
+
+	// Icon to return
+	return shFileInfo.hIcon;
+}
+
 BOOL CAutoCompleteDemoApp::InitInstance()
 {
 	// InitCommonControlsEx() is required on Windows XP if an application
@@ -209,23 +224,33 @@ BOOL CAutoCompleteDemoApp::InitInstance()
 	pMainFrame->ShowWindow(m_nCmdShow);
 	pMainFrame->UpdateWindow();
 
-	CStdioFile file;
-	UINT nFlags = CFile::typeText | CFile::modeRead;
-	if ( file.Open(_T("TestList.txt"), nFlags) )
+	PWSTR pszPath = nullptr;
+	if ( SUCCEEDED(SHGetKnownFolderPath(FOLDERID_System, 0, NULL, &pszPath)) )
 	{
-		CString strLine;
-		while ( file.ReadString(strLine) )
+		m_strPath = pszPath;
+		CString strFindPath = m_strPath + _T("\\*");
+		WIN32_FIND_DATA fd;
+		HANDLE hFind = FindFirstFile((LPCTSTR)strFindPath, &fd);
+		if (hFind)
 		{
-			strLine.TrimLeft();
-			strLine.TrimRight();
-			if (strLine.IsEmpty())
-				continue;
-			m_saTestList.Add(strLine);
+			CSize size(16,16);
+			UINT nImageListFlags = ILC_COLOR32 | ILC_MASK;
+			m_imgList.Create(size.cx, size.cy, nImageListFlags, 0, 8);
+			CoInitialize(NULL);
+			do 
+			{
+				strFindPath = m_strPath + _T('\\') + fd.cFileName;
+				HICON hIcon = GetAssociatedFileIcon((LPCTSTR)strFindPath);
+				if (hIcon)
+				{
+					m_saTestList.Add(fd.cFileName);
+					m_imgList.Add(hIcon);
+					DestroyIcon(hIcon);
+				}
+			} while (FindNextFile(hFind, &fd));
+			FindClose(hFind);
+			CoInitialize(NULL);
 		}
-	}
-	else
-	{
-		AfxMessageBox(_T("Please prepare TestList.txt!"));
 	}
 
 	m_bDuringInit = false;

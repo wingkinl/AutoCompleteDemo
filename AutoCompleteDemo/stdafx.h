@@ -43,6 +43,8 @@
 #ifdef _ENABLE_SCINTILLA_BUILD
 #include <memory>
 #include <Scintilla.h>
+
+#define SCINTILLA_CTRL_HEADER	"ScintillaWrapper\ScintillaCtrl.h"
 #endif // _ENABLE_SCINTILLA_BUILD
 
 

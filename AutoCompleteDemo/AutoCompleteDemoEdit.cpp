@@ -1,39 +1,5 @@
 #include "stdafx.h"
 #include "AutoCompleteDemoEdit.h"
-#include "AutoCompleteDemo.h"
-
-BOOL CDemoEditACImp::IsValidChar(UINT nChar) const
-{
-	if (!CEditACImp::IsValidChar(nChar))
-	{
-		switch (nChar)
-		{
-		case _T('_'):
-		case _T('$'):
-			return TRUE;
-		}
-		return FALSE;
-	}
-	return TRUE;
-}
-
-int CDemoEditACImp::GetTotalItemCount() const
-{
-	return (int)theApp.m_saTestList.GetCount();
-}
-
-LPCTSTR CDemoEditACImp::GetItemDisplayText(int nItem) const
-{
-	return (LPCTSTR)theApp.m_saTestList[nItem];
-}
-
-
-int CDemoEditACImp::UpdateFilteredList(LPCTSTR pszFilterText)
-{
-	m_bFuzzyMatch = theApp.m_bFuzzyMatch;
-	m_bMatchCase = theApp.m_bMatchCase;
-	return CEditACImp::UpdateFilteredList(pszFilterText);
-}
 
 /************************************************************************/
 /* CDemoACEdit

@@ -2,6 +2,7 @@
 
 #ifdef _ENABLE_SCINTILLA_BUILD
 #include "ScintillaWrapper\ScintillaDocView.h"
+#include "AutoCompleteDemoEdit.h"
 // CAutoCompleteDemoScintillaView view
 
 typedef CScintillaView	CAutoCompleteDemoScintillaViewBase;
@@ -22,7 +23,7 @@ public:
 	virtual void Dump(CDumpContext& dc) const;
 #endif
 #endif
-
+	CDemoScintillaACImp	m_acImp;
 protected:
 	DECLARE_MESSAGE_MAP()
 };

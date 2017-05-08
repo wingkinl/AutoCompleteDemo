@@ -4,7 +4,6 @@
 #include "stdafx.h"
 #include "AutoCompleteDemoEditView.h"
 
-
 // CAutoCompleteDemoEditView
 
 IMPLEMENT_DYNCREATE(CAutoCompleteDemoEditView, CEditView)

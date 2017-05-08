@@ -12,6 +12,9 @@
 #define AC_TIMER_ALPHA_ID				0xabcd
 #define AC_TIMER_ALPHA_ELAPSE			25
 
+/************************************************************************/
+/* CWindowACImp
+/************************************************************************/
 CWindowACImp::CWindowACImp()
 {
 	m_bMatchCase = false;
@@ -172,6 +175,10 @@ int CWindowACImp::UpdateFilteredList(LPCTSTR pszFilterText)
 	return (int)m_arrFilteredIndices.GetSize();
 }
 
+/************************************************************************/
+/* CEditACImp
+/************************************************************************/
+
 CEditACImp::CEditACImp()
 {
 	m_bIsRichEdit = false;
@@ -309,7 +316,48 @@ void CEditACImp::GetLineText(int nLineIndex, CString& strLine, int nLineLen) con
 	strLine.ReleaseBuffer(nLineLen + 1);
 }
 
-// CAutoCompleteWnd
+/************************************************************************/
+/* CScintillaACImp
+/************************************************************************/
+#ifdef _ENABLE_SCINTILLA_BUILD
+
+#include SCINTILLA_CTRL_HEADER
+
+CScintillaACImp::CScintillaACImp(CScintillaCtrl* pCtrl)
+	: m_pCtrl(pCtrl)
+{
+
+}
+
+CScintillaACImp::~CScintillaACImp()
+{
+
+}
+
+BOOL CScintillaACImp::GetInitInfo(AUTOCINITINFO* pInfo)
+{
+	return TRUE;
+}
+
+BOOL CScintillaACImp::AutoComplete(AUTOCCOMPLETE* pInfo)
+{
+	return TRUE;
+}
+
+BOOL CScintillaACImp::GetRangeText(CString& strText, EditPosLen nStart, EditPosLen nEnd) const
+{
+	return TRUE;
+}
+
+EditPosLen CScintillaACImp::GetCaretPos() const
+{
+	return TRUE;
+}
+#endif // _ENABLE_SCINTILLA_BUILD
+
+/************************************************************************/
+/* CAutoCompleteWnd
+/************************************************************************/
 
 IMPLEMENT_DYNAMIC(CAutoCompleteWnd, CAutoCompleteWndBase)
 
@@ -427,7 +475,7 @@ void CAutoCompleteWnd::SetImageList(CImageList* pImageList)
 {
 	if (m_listCtrl)
 	{
-		m_listCtrl->SetImageList(pImageList, LVSIL_NORMAL);
+		m_listCtrl->SetImageList(pImageList, LVSIL_SMALL);
 		IMAGEINFO ii = { 0 };
 		pImageList->GetImageInfo(0, &ii);
 		m_szIcon.cx = abs(ii.rcImage.right - ii.rcImage.left);
@@ -674,7 +722,7 @@ void CAutoCompleteWnd::CustomDrawListImpl(CDC* pDC, LPNMLVCUSTOMDRAW plvcd)
 	pDC->FillSolidRect(rect, clrBk);
 
 	// Icon
-	auto pImageList = m_listCtrl->GetImageList(LVSIL_NORMAL);
+	auto pImageList = m_listCtrl->GetImageList(LVSIL_SMALL);
 	if (pImageList)
 	{
 		LVITEM item = { 0 };
@@ -682,7 +730,7 @@ void CAutoCompleteWnd::CustomDrawListImpl(CDC* pDC, LPNMLVCUSTOMDRAW plvcd)
 		VERIFY(m_listCtrl->GetItem(&item));
 		int nIcon = item.iImage;
 		CRect rcIcon;
-		m_listCtrl->GetSubItemRect(nRow, 0, LVIR_ICON, rcIcon);
+		m_listCtrl->GetItemRect(nRow, rcIcon, LVIR_ICON);
 // 		rcIcon = rect;
 // 		rcIcon.left += LIST_ITEM_GAP;
 // 		rcIcon.right = rcIcon.left + m_szIcon.cx;
@@ -699,7 +747,7 @@ void CAutoCompleteWnd::CustomDrawListImpl(CDC* pDC, LPNMLVCUSTOMDRAW plvcd)
 
 void CAutoCompleteWnd::OnDrawLabel(CDC* pDC, LPNMLVCUSTOMDRAW plvcd, UINT nState, CRect& rect, BOOL bCalcOnly)
 {
-	auto pImageList = m_listCtrl->GetImageList(LVSIL_NORMAL);
+	//auto pImageList = m_listCtrl->GetImageList(LVSIL_NORMAL);
 	int nRow = (int)plvcd->nmcd.dwItemSpec;
 	BOOL bSelected = nState & LVIS_SELECTED;
 	m_listCtrl->GetItemRect(nRow, rect, LVIR_LABEL);

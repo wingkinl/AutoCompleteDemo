@@ -112,6 +112,7 @@ public:
 	bool			m_bFuzzyMatch;
 };
 
+//template <typename EditT>
 class CEditACImp : public CWindowACImp
 {
 public:
@@ -199,6 +200,25 @@ public:
 	CWnd*	m_pEdit;
 	bool	m_bIsRichEdit;
 };
+
+#ifdef _ENABLE_SCINTILLA_BUILD
+class CScintillaCtrl;
+
+class CScintillaACImp : public CWindowACImp
+{
+public:
+	CScintillaACImp(CScintillaCtrl* pCtrl = nullptr);
+	virtual ~CScintillaACImp();
+
+	BOOL GetInitInfo(AUTOCINITINFO* pInfo) override;
+	BOOL AutoComplete(AUTOCCOMPLETE* pInfo) override;
+
+	BOOL		GetRangeText(CString& strText, EditPosLen nStart, EditPosLen nEnd) const override;
+	EditPosLen	GetCaretPos() const override;
+public:
+	CScintillaCtrl*	m_pCtrl;
+};
+#endif // _ENABLE_SCINTILLA_BUILD
 
 
 // CAutoCompleteWnd

@@ -1,7 +1,6 @@
 #pragma once
 #include "AutoCompleteDemoEdit.h"
 
-
 // CAutoCompleteDemoEditView view
 
 class CAutoCompleteDemoEditView : public CEditView

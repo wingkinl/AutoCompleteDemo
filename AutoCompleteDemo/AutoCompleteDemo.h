@@ -32,7 +32,9 @@ public:
 #endif // _ENABLE_SCINTILLA_BUILD
 	bool	m_bDuringInit;
 
+	CString			m_strPath;
 	CStringArray	m_saTestList;
+	CImageList		m_imgList;
 	bool			m_bMatchCase;
 	bool			m_bFuzzyMatch;
 
