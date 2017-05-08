@@ -201,6 +201,8 @@
     <ClInclude Include="AutoCompleteDemoRichEditView.h" />
     <ClInclude Include="AutoCompleteDemoScintillaDoc.h" />
     <ClInclude Include="AutoCompleteDemoScintillaView.h" />
+    <ClInclude Include="ScintillaWrapper\ScintillaCtrl.h" />
+    <ClInclude Include="ScintillaWrapper\ScintillaDocView.h" />
     <ClInclude Include="SyncPopupFrameImpl.h" />
     <ClInclude Include="AutoCompleteListCtrl.h" />
     <ClInclude Include="AutoCompleteWnd.h" />
@@ -223,6 +225,8 @@
     <ClCompile Include="AutoCompleteDemoRichEditView.cpp" />
     <ClCompile Include="AutoCompleteDemoScintillaDoc.cpp" />
     <ClCompile Include="AutoCompleteDemoScintillaView.cpp" />
+    <ClCompile Include="ScintillaWrapper\ScintillaCtrl.cpp" />
+    <ClCompile Include="ScintillaWrapper\ScintillaDocView.cpp" />
     <ClCompile Include="SyncPopupFrameImpl.cpp" />
     <ClCompile Include="AutoCompleteListCtrl.cpp" />
     <ClCompile Include="AutoCompleteWnd.cpp" />

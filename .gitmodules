@@ -1,0 +1,3 @@
+[submodule "AutoCompleteDemo\\ScintillaWrapper"]
+	path = AutoCompleteDemo\\ScintillaWrapper
+	url = https://github.com/wingkinl/ScintillaWrapper.git

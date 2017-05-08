@@ -1,7 +1,6 @@
 #pragma once
 
 #ifdef _ENABLE_SCINTILLA_BUILD
-#include "QuickFindView.inl"
 #include "ScintillaWrapper\ScintillaDocView.h"
 // CAutoCompleteDemoScintillaView view
 

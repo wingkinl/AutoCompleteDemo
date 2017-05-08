@@ -171,15 +171,16 @@ BOOL CAutoCompleteDemoApp::InitInstance()
 	if (m_hSciDLL == nullptr)
 	{
 		AfxMessageBox(_T("Scintilla DLL is not installed, Please download the SciTE editor and copy the SciLexer.dll into this application's directory"));
-		return FALSE;
 	}
-
-	pDocTemplate = new CMultiDocTemplate(IDR_AutoCompleteDemTYPE,
-		RUNTIME_CLASS(CAutoCompleteDemoScintillaDoc),
-		RUNTIME_CLASS(CChildFrame), // custom MDI child frame
-		RUNTIME_CLASS(CAutoCompleteDemoScintillaView));
-	pDocTemplate->SetContainerInfo(IDR_AutoCompleteDemTYPE_CNTR_IP);
-	AddDocTemplate(pDocTemplate);
+	else
+	{
+		pDocTemplate = new CMultiDocTemplate(IDR_AutoCompleteDemTYPE,
+			RUNTIME_CLASS(CAutoCompleteDemoScintillaDoc),
+			RUNTIME_CLASS(CChildFrame), // custom MDI child frame
+			RUNTIME_CLASS(CAutoCompleteDemoScintillaView));
+		pDocTemplate->SetContainerInfo(IDR_AutoCompleteDemTYPE_CNTR_IP);
+		AddDocTemplate(pDocTemplate);
+	}
 #else
 #pragma message("scintilla-based view not enabled, put scintilla's header files to scintilla folder to enable building it.")
 #endif // _ENABLE_SCINTILLA_BUILD
