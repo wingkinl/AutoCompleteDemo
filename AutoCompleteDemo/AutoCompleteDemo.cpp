@@ -236,7 +236,6 @@ BOOL CAutoCompleteDemoApp::InitInstance()
 			CSize size(16,16);
 			UINT nImageListFlags = ILC_COLOR32 | ILC_MASK;
 			m_imgList.Create(size.cx, size.cy, nImageListFlags, 0, 8);
-			CoInitialize(NULL);
 			do 
 			{
 				strFindPath = m_strPath + _T('\\') + fd.cFileName;
@@ -245,11 +244,16 @@ BOOL CAutoCompleteDemoApp::InitInstance()
 				{
 					m_saTestList.Add(fd.cFileName);
 					m_imgList.Add(hIcon);
+
+					if (_tcscmp(fd.cFileName, _T("xwizard.exe")) == 0)
+					{
+						CClientDC dc(NULL);
+						m_imgList.Draw(&dc, m_imgList.GetImageCount()-1, CPoint(100, 100), ILD_TRANSPARENT);
+					}
 					DestroyIcon(hIcon);
 				}
 			} while (FindNextFile(hFind, &fd));
 			FindClose(hFind);
-			CoInitialize(NULL);
 		}
 	}
 

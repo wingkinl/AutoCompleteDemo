@@ -112,23 +112,23 @@ LPCTSTR CWindowACImp::GetItemDisplayText(int nItem) const
 
 int CWindowACImp::GetItemIconIndex(int nItem) const
 {
-	return -1;
+	return nItem;
 }
 
 BOOL CWindowACImp::GetDisplayInfo(AUTOCNMHDR* nmhdr) const
 {
 	AUTOCDISPINFO* pInfo = (AUTOCDISPINFO*)nmhdr;
 	AUTOCITEM& item = pInfo->item;
+	int nMappedItem = item.nItem;
+	if (nMappedItem < m_arrFilteredIndices.GetSize())
+		nMappedItem = m_arrFilteredIndices[nMappedItem];
 	if (item.mask & AUTOCITEM::ACIF_TEXT)
 	{
-		int nMappedItem = item.nItem;
-		if (nMappedItem < m_arrFilteredIndices.GetSize())
-			nMappedItem = m_arrFilteredIndices[nMappedItem];
 		_tcsncpy(item.pszText, GetItemDisplayText(nMappedItem), item.cchTextMax);
 	}
 	if (item.mask & AUTOCITEM::ACIF_IMAGE)
 	{
-		item.nImaage = GetItemIconIndex(item.nItem);
+		item.nImage = GetItemIconIndex(nMappedItem);
 	}
 	return TRUE;
 }
@@ -565,7 +565,7 @@ int CAutoCompleteWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		ASSERT(0);
 		return 1;
 	}
-	DWORD dwStyle = WS_CHILD | WS_VSCROLL | WS_VISIBLE;
+	DWORD dwStyle = WS_CHILD | WS_VSCROLL | WS_VISIBLE | WS_BORDER;
 	dwStyle |= LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS;
 	// the image list should be reused
 	dwStyle |= LVS_SHAREIMAGELISTS;
@@ -621,7 +621,8 @@ void CAutoCompleteWnd::OnGetListDispInfo(NMHDR* pNMHDR, LRESULT* pResult)
 
 	VERIFY( NotifyOwner(ACCmdGetListDispInfo, (AUTOCNMHDR*)&info) );
 
-	listItem.iImage = acItem.nImaage;
+	if (listItem.mask & LVIF_IMAGE)
+		listItem.iImage = acItem.nImage;
 
 	*pResult = 0;
 }
@@ -726,6 +727,7 @@ void CAutoCompleteWnd::CustomDrawListImpl(CDC* pDC, LPNMLVCUSTOMDRAW plvcd)
 	if (pImageList)
 	{
 		LVITEM item = { 0 };
+		item.iItem = nRow;
 		item.mask = LVIF_IMAGE;
 		VERIFY(m_listCtrl->GetItem(&item));
 		int nIcon = item.iImage;

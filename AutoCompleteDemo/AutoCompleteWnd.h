@@ -47,7 +47,7 @@ struct AUTOCITEM
 	};
 	UINT	mask;
 	int		nItem;
-	int		nImaage;
+	int		nImage;
 	LPTSTR	pszText;
 	int		cchTextMax;
 };

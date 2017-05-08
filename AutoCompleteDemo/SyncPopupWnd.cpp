@@ -48,7 +48,7 @@ BOOL CSyncPopupWnd::Create(CWnd* pOwner, POINT pos)
 	UINT nClassStyle = CS_HREDRAW|CS_VREDRAW;
 	CString strClassName = ::AfxRegisterWndClass(nClassStyle, ::LoadCursor(NULL, IDC_ARROW), NULL, NULL);
 	DWORD dwExStyle = WS_EX_TOPMOST|WS_EX_NOPARENTNOTIFY;
-	DWORD dwStyle = WS_POPUP|WS_BORDER;
+	DWORD dwStyle = WS_POPUP;
 	CRect rect(pos, CSize(DEFAULT_SYNC_WND_SIZE, DEFAULT_SYNC_WND_SIZE));
 	BOOL bCreated = CreateEx(dwExStyle, strClassName, _T(""),
 		dwStyle, rect, pOwner, 0);

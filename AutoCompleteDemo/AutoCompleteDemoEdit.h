@@ -14,8 +14,6 @@ public:
 
 	int GetTotalItemCount() const override;
 
-	int GetItemIconIndex(int nItem) const override;
-
 	LPCTSTR GetItemDisplayText(int nItem) const override;
 
 	int UpdateFilteredList(LPCTSTR pszFilterText) override;
@@ -46,15 +44,11 @@ BOOL CDemoACImp<ACImpBaseT>::IsValidChar(UINT nChar) const
 	case _T('|'):
 	case _T('?'):
 	case _T('*'):
+	case _T(' '):
+	case _T('\t'):
 		return FALSE;
 	}
 	return TRUE;
-}
-
-template <typename ACImpBaseT>
-int CDemoACImp<ACImpBaseT>::GetItemIconIndex(int nItem) const
-{
-	return (nItem % theApp.m_imgList.GetImageCount());
 }
 
 template <typename ACImpBaseT>
