@@ -12,7 +12,7 @@ IMPLEMENT_DYNCREATE(CAutoCompleteDemoScintillaView, CAutoCompleteDemoScintillaVi
 
 CAutoCompleteDemoScintillaView::CAutoCompleteDemoScintillaView()
 {
-	m_acImp.m_pCtrl = &GetCtrl();
+	m_acImp.m_pEdit = &GetCtrl();
 }
 
 CAutoCompleteDemoScintillaView::~CAutoCompleteDemoScintillaView()

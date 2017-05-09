@@ -227,7 +227,7 @@ public:
 	BOOL		GetRangeText(CString& strText, EditPosLen nStart, EditPosLen nEnd) const override;
 	EditPosLen	GetCaretPos() const override;
 public:
-	CScintillaCtrl*	m_pCtrl;
+	CScintillaCtrl*	m_pEdit;
 };
 #endif // _ENABLE_SCINTILLA_BUILD
 

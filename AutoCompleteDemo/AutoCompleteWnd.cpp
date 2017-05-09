@@ -30,7 +30,7 @@ CWindowACImp::~CWindowACImp()
 
 BOOL CWindowACImp::IsValidChar(UINT nChar) const
 {
-	return nChar <= 0xFF && _istalnum(nChar);
+	return 0 < nChar && nChar <= 0xFF && _istalnum(nChar);
 }
 
 BOOL CWindowACImp::HandleKey(AUTOCKEYINFO* pInfo, CString& strText)
@@ -71,7 +71,8 @@ BOOL CWindowACImp::HandleKey(AUTOCKEYINFO* pInfo, CString& strText)
 	if (bIsValid)
 	{
 		auto nCurPos = GetCaretPos() + nMoveCaret;
-		GetRangeText(strText, pInfo->nPosStartChar, nCurPos);
+		if (pInfo->nPosStartChar < nCurPos)
+			GetRangeText(strText, pInfo->nPosStartChar, nCurPos);
 		if (nMoveCaret < 0)
 		{
 			if (nCurPos < pInfo->nPosStartChar)
@@ -361,7 +362,7 @@ void CEditACImp::GetLineText(int nLineIndex, CString& strLine, int nLineLen) con
 #include SCINTILLA_CTRL_HEADER
 
 CScintillaACImp::CScintillaACImp(CScintillaCtrl* pCtrl)
-	: m_pCtrl(pCtrl)
+	: m_pEdit(pCtrl)
 {
 
 }
@@ -373,43 +374,115 @@ CScintillaACImp::~CScintillaACImp()
 
 BOOL CScintillaACImp::GetInitInfo(AUTOCINITINFO* pInfo)
 {
-	auto nCurPos = m_pCtrl->GetCurrentPos();
-	int nCurLine = m_pCtrl->LineFromPosition(nCurPos);
-	auto nLineStartCharPos = m_pCtrl->PositionFromLine(nCurLine);
+	auto nCurPos = m_pEdit->GetCurrentPos();
+	int nCurLine = m_pEdit->LineFromPosition(nCurPos);
+	auto nLineStartCharPos = m_pEdit->PositionFromLine(nCurLine);
 	pInfo->strStart.Empty();
-	auto nCharPos = nCurPos - 1;
-	for (; nCharPos >= nLineStartCharPos; --nCharPos)
+	pInfo->nPosStartChar = m_pEdit->PositionBefore(nCurPos);
+	auto nCharPos = pInfo->nPosStartChar;
+	while( nCharPos >= nLineStartCharPos )
 	{
-		auto nChar = m_pCtrl->GetCharAt(nCharPos);
+		auto nChar = m_pEdit->GetCharAt(nCharPos);
 		if ( !IsValidChar((UINT)nChar) )
-		{
 			break;
-		}
 		pInfo->strStart.Insert(0, nChar);
+		pInfo->nPosStartChar = nCharPos;
+		if (nCharPos <= 0)
+			break;
+		nCharPos = m_pEdit->PositionBefore(nCharPos);
 	}
 
-	pInfo->nPosStartChar = (EditPosLen)(nCharPos + 1);
 	pInfo->nStartStrLen = (EditPosLen)pInfo->strStart.GetLength();
 
 	if (pInfo->nStartStrLen == 0)
 		return FALSE;
-
+	pInfo->posWordScreen.x = m_pEdit->PointXFromPosition(pInfo->nPosStartChar);
+	pInfo->posWordScreen.y = m_pEdit->PointYFromPosition(pInfo->nPosStartChar);
+	m_pEdit->ClientToScreen(&pInfo->posWordScreen);
+	pInfo->nLineHeight = m_pEdit->TextHeight(nCurLine);
+	pInfo->posWordScreen.y += pInfo->nLineHeight + 1;
 	return TRUE;
 }
 
 BOOL CScintillaACImp::AutoComplete(AUTOCCOMPLETE* pInfo)
 {
+	int nEndCharPos = GetCaretPos();
+	if (pInfo->bDropRestOfWord)
+	{
+		int nCurLine = m_pEdit->LineFromPosition(nEndCharPos);
+		auto nLineEndPos = m_pEdit->GetLineEndPosition(nEndCharPos);
+		auto nCharPos = nEndCharPos;
+		auto nDocEnd = m_pEdit->GetLength();
+		while (nCharPos < nLineEndPos)
+		{
+			auto nChar = m_pEdit->GetCharAt(nCharPos);
+			if (!IsValidChar((UINT)nChar) || nCharPos >= nDocEnd)
+			{
+				nEndCharPos = nCharPos;
+				break;
+			}
+			nCharPos = m_pEdit->PositionAfter(nCharPos);
+		}
+	}
+	m_pEdit->SetSel(pInfo->nPosStartChar, nEndCharPos);
+	m_pEdit->ReplaceSel(pInfo->strText);
 	return TRUE;
 }
 
 BOOL CScintillaACImp::GetRangeText(CString& strText, EditPosLen nStart, EditPosLen nEnd) const
 {
+	Sci_TextRange tr;
+	tr.chrg.cpMin = nStart;
+	tr.chrg.cpMax = nEnd;
+	char* pszBuffer = new char[nEnd-nStart+1];
+	pszBuffer[0] = '\0';
+	tr.lpstrText = pszBuffer;
+	m_pEdit->GetTextRange(&tr);
+	if (m_pEdit->GetCodePage() == SC_CP_UTF8)
+	{
+#ifdef _UNICODE
+		strText = m_pEdit->UTF82W(pszBuffer, -1);
+#else
+		CStringW strW = m_pEdit->UTF82W(pszBuffer, -1);
+		auto pszText = (LPCWSTR)strW;
+		int nLength = -1;
+		int nMBCSLength = WideCharToMultiByte(CP_ACP, 0, pszText, nLength, nullptr, 0, nullptr, nullptr);
+
+		//If the calculated length is zero, then ensure we have at least room for a null terminator
+		if (nMBCSLength == 0)
+			nMBCSLength = 1;
+
+		//Now recall with the buffer to get the converted text
+		char* pszUTF8Text = strText.GetBuffer(nMBCSLength + 1); //include an extra byte because we may be null terminating the string ourselves
+		int nCharsWritten = WideCharToMultiByte(CP_ACP, 0, pszText, nLength, pszUTF8Text, nMBCSLength, nullptr, nullptr);
+
+		//Ensure we null terminate the text if WideCharToMultiByte doesn't do it for us
+		if (nLength != -1)
+		{
+			AFXASSUME(nCharsWritten <= nMBCSLength);
+			pszUTF8Text[nCharsWritten] = '\0';
+		}
+		strText.ReleaseBuffer();
+#endif
+	}
+	else
+	{
+#ifdef _UNICODE
+		int nChars = MultiByteToWideChar(CP_ACP, 0, pszBuffer, nEnd-nStart, nullptr, 0);
+		auto pstr = strText.GetBuffer(nChars+1);
+		MultiByteToWideChar(CP_ACP, 0, pszBuffer, nEnd - nStart, pstr, nChars);
+		strText.ReleaseBuffer();
+#else
+		strText = pszBuffer;
+#endif // _UNICODE
+	}
+	delete [] pszBuffer;
 	return TRUE;
 }
 
 EditPosLen CScintillaACImp::GetCaretPos() const
 {
-	return TRUE;
+	return (EditPosLen)m_pEdit->GetCurrentPos();
 }
 #endif // _ENABLE_SCINTILLA_BUILD
 
