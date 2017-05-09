@@ -225,8 +225,18 @@
     <ClCompile Include="AutoCompleteDemoRichEditView.cpp" />
     <ClCompile Include="AutoCompleteDemoScintillaDoc.cpp" />
     <ClCompile Include="AutoCompleteDemoScintillaView.cpp" />
-    <ClCompile Include="ScintillaWrapper\ScintillaCtrl.cpp" />
-    <ClCompile Include="ScintillaWrapper\ScintillaDocView.cpp" />
+    <ClCompile Include="ScintillaWrapper\ScintillaCtrl.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(oExcludeScintilla)</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(oExcludeScintilla)</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(oExcludeScintilla)</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(oExcludeScintilla)</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="ScintillaWrapper\ScintillaDocView.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(oExcludeScintilla)</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(oExcludeScintilla)</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(oExcludeScintilla)</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(oExcludeScintilla)</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="SyncPopupFrameImpl.cpp" />
     <ClCompile Include="AutoCompleteListCtrl.cpp" />
     <ClCompile Include="AutoCompleteWnd.cpp" />

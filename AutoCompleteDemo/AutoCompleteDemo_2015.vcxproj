@@ -230,8 +230,18 @@
     <ClCompile Include="ChildFrm.cpp" />
     <ClCompile Include="CntrItem.cpp" />
     <ClCompile Include="MainFrm.cpp" />
-    <ClCompile Include="ScintillaWrapper\ScintillaCtrl.cpp" />
-    <ClCompile Include="ScintillaWrapper\ScintillaDocView.cpp" />
+    <ClCompile Include="ScintillaWrapper\ScintillaCtrl.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(oExcludeScintilla)</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(oExcludeScintilla)</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(oExcludeScintilla)</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(oExcludeScintilla)</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="ScintillaWrapper\ScintillaDocView.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(oExcludeScintilla)</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(oExcludeScintilla)</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(oExcludeScintilla)</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(oExcludeScintilla)</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

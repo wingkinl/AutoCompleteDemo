@@ -74,7 +74,9 @@ int CDemoACImp<ACImpBaseT>::UpdateFilteredList(LPCTSTR pszFilterText)
 }
 
 typedef CDemoACImp<CEditACImp>		CDemoEditACImp;
+#ifdef _ENABLE_SCINTILLA_BUILD
 typedef CDemoACImp<CScintillaACImp>	CDemoScintillaACImp;
+#endif // _ENABLE_SCINTILLA_BUILD
 
 
 class CDemoACEdit : public CEdit
