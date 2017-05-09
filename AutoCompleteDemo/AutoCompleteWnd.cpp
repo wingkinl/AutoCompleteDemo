@@ -19,6 +19,8 @@ CWindowACImp::CWindowACImp()
 {
 	m_bMatchCase = false;
 	m_bFuzzyMatch = true;
+	m_bAllowCaretMove = true;
+	m_bUpdateListAfterCaretMove = false;
 }
 
 CWindowACImp::~CWindowACImp()
@@ -28,12 +30,15 @@ CWindowACImp::~CWindowACImp()
 
 BOOL CWindowACImp::IsValidChar(UINT nChar) const
 {
-	return _istalnum(nChar);
+	return nChar <= 0xFF && _istalnum(nChar);
 }
 
 BOOL CWindowACImp::HandleKey(AUTOCKEYINFO* pInfo, CString& strText)
 {
 	BOOL bIsValid = TRUE;
+	BOOL bAppendChar = FALSE;
+	BOOL bUpdateList = TRUE;
+	int nMoveCaret = 0;
 	switch (pInfo->nKey)
 	{
 	case VK_DELETE:
@@ -48,18 +53,58 @@ BOOL CWindowACImp::HandleKey(AUTOCKEYINFO* pInfo, CString& strText)
 			}
 		}
 		break;
+	case VK_HOME:
+	case VK_END:
+		bIsValid = FALSE;
+		break;
+	case VK_LEFT:
+	case VK_RIGHT:
+		bIsValid = m_bAllowCaretMove;
+		nMoveCaret = pInfo->nKey == VK_RIGHT ? 1 : -1;
+		bUpdateList = m_bUpdateListAfterCaretMove;
+		break;
 	default:
 		bIsValid = IsValidChar(pInfo->nChar);
+		bAppendChar = TRUE;
 		break;
 	}
 	if (bIsValid)
 	{
-		GetRangeText(strText, pInfo->nPosStartChar, GetCaretPos());
+		auto nCurPos = GetCaretPos() + nMoveCaret;
+		GetRangeText(strText, pInfo->nPosStartChar, nCurPos);
+		if (nMoveCaret < 0)
+		{
+			if (nCurPos < pInfo->nPosStartChar)
+				bIsValid = FALSE;
+		}
+		else if (nMoveCaret > 0)
+		{
+			int nLen = strText.GetLength();
+			for (int nn = nLen-nMoveCaret; nn >= 0; --nn)
+			{
+				if (!IsValidChar(strText[nn]))
+				{
+					bIsValid = FALSE;
+					break;
+				}
+			}
+		}
 		if (pInfo->nKey == VK_BACK)
 			strText.Delete(strText.GetLength()-1);
-		else
+		else if (bAppendChar)
 			strText.AppendChar(pInfo->nChar);
 	}
+	if (bIsValid)
+	{
+		pInfo->nItemCount = bUpdateList ? UpdateFilteredList((LPCTSTR)strText) : -1;
+		pInfo->bClose = FALSE;
+	}
+	if (!bIsValid)
+	{
+		pInfo->bClose = TRUE;
+	}
+	pInfo->bEatKey = FALSE;
+
 	return bIsValid;
 }
 
@@ -86,18 +131,8 @@ LRESULT CWindowACImp::OnACNotify(WPARAM wp, LPARAM lp)
 		{
 			AUTOCKEYINFO* pInfo = (AUTOCKEYINFO*)nmhdr;
 			CString strText;
-			BOOL bIsValid = HandleKey(pInfo, strText);
-			if (bIsValid)
-			{
-				pInfo->nItemCount = UpdateFilteredList((LPCTSTR)strText);
-				pInfo->bClose = FALSE;
-			}
-			if (!bIsValid)
-			{
-				pInfo->bClose = TRUE;
-			}
-			pInfo->bEatKey = FALSE;
-			return TRUE;
+			HandleKey(pInfo, strText);
+			return TRUE; // message processed
 		}
 	case ACCmdComplete:
 		return (LRESULT)AutoComplete((AUTOCCOMPLETE*)nmhdr);
@@ -223,8 +258,8 @@ BOOL CEditACImp::GetInitInfo(AUTOCINITINFO* pInfo)
 	if (pInfo->nStartStrLen == 0)
 		return FALSE;
 	// note: PosFromChar returns top-left corner of a given character
-	pInfo->posACWndScreen = PosFromChar(pInfo->nPosStartChar);
-	m_pEdit->ClientToScreen(&pInfo->posACWndScreen);
+	pInfo->posWordScreen = PosFromChar(pInfo->nPosStartChar);
+	m_pEdit->ClientToScreen(&pInfo->posWordScreen);
 
 	if (m_pEdit->GetStyle() & ES_MULTILINE)
 	{
@@ -236,7 +271,8 @@ BOOL CEditACImp::GetInitInfo(AUTOCINITINFO* pInfo)
 			int nNextPrevLineCharPos = LineIndex(nNextPrevLine);
 			CPoint posNextPrevLine = PosFromChar(nNextPrevLineCharPos);
 			m_pEdit->ClientToScreen(&posNextPrevLine);
-			pInfo->posACWndScreen.y += abs(posNextPrevLine.y - pInfo->posACWndScreen.y);
+			pInfo->nLineHeight = abs(posNextPrevLine.y - pInfo->posWordScreen.y);
+			pInfo->nLineHeight += 2;
 		}
 		else
 		{
@@ -244,15 +280,16 @@ BOOL CEditACImp::GetInitInfo(AUTOCINITINFO* pInfo)
 			CDC* pDC = m_pEdit->GetDC();
 			pDC->GetTextMetrics(&tm);
 			m_pEdit->ReleaseDC(pDC);
-			pInfo->posACWndScreen.y += tm.tmHeight;
+			pInfo->nLineHeight = tm.tmHeight;
 		}
 	}
 	else
 	{
 		CRect rect;
 		m_pEdit->GetWindowRect(rect);
-		pInfo->posACWndScreen.y = rect.bottom;
+		pInfo->nLineHeight = rect.bottom - pInfo->posWordScreen.y;
 	}
+	pInfo->posWordScreen.y += pInfo->nLineHeight;
 	return !pInfo->strStart.IsEmpty();
 }
 
@@ -336,6 +373,26 @@ CScintillaACImp::~CScintillaACImp()
 
 BOOL CScintillaACImp::GetInitInfo(AUTOCINITINFO* pInfo)
 {
+	auto nCurPos = m_pCtrl->GetCurrentPos();
+	int nCurLine = m_pCtrl->LineFromPosition(nCurPos);
+	auto nLineStartCharPos = m_pCtrl->PositionFromLine(nCurLine);
+	pInfo->strStart.Empty();
+	auto nCharPos = nCurPos - 1;
+	for (; nCharPos >= nLineStartCharPos; --nCharPos)
+	{
+		auto nChar = m_pCtrl->GetCharAt(nCharPos);
+		if ( !IsValidChar((UINT)nChar) )
+		{
+			break;
+		}
+		pInfo->strStart.Insert(0, nChar);
+	}
+
+	pInfo->nPosStartChar = (EditPosLen)(nCharPos + 1);
+	pInfo->nStartStrLen = (EditPosLen)pInfo->strStart.GetLength();
+
+	if (pInfo->nStartStrLen == 0)
+		return FALSE;
 
 	return TRUE;
 }
@@ -398,7 +455,7 @@ END_MESSAGE_MAP()
 
 BOOL CAutoCompleteWnd::Create(CWnd* pOwner, const AUTOCINITINFO& info)
 {
-	BOOL bCreated = CAutoCompleteWndBase::Create(pOwner, info.posACWndScreen);
+	BOOL bCreated = CAutoCompleteWndBase::Create(pOwner, info.posWordScreen);
 	if (!bCreated)
 		return FALSE;
 	SetOwner(pOwner);
@@ -737,9 +794,6 @@ void CAutoCompleteWnd::CustomDrawListImpl(CDC* pDC, LPNMLVCUSTOMDRAW plvcd)
 		int nIcon = item.iImage;
 		CRect rcIcon;
 		m_listCtrl->GetItemRect(nRow, rcIcon, LVIR_ICON);
-// 		rcIcon = rect;
-// 		rcIcon.left += LIST_ITEM_GAP;
-// 		rcIcon.right = rcIcon.left + m_szIcon.cx;
 		CPoint pt = rcIcon.TopLeft();
 		pt.x += (rcIcon.Width() - m_szIcon.cx) / 2;
 		pt.y += (rcIcon.Height() - m_szIcon.cy) / 2;
@@ -753,21 +807,21 @@ void CAutoCompleteWnd::CustomDrawListImpl(CDC* pDC, LPNMLVCUSTOMDRAW plvcd)
 
 void CAutoCompleteWnd::OnDrawLabel(CDC* pDC, LPNMLVCUSTOMDRAW plvcd, UINT nState, CRect& rect, BOOL bCalcOnly)
 {
-	//auto pImageList = m_listCtrl->GetImageList(LVSIL_NORMAL);
 	int nRow = (int)plvcd->nmcd.dwItemSpec;
-	BOOL bSelected = nState & LVIS_SELECTED;
-	m_listCtrl->GetItemRect(nRow, rect, LVIR_LABEL);
-// 	m_listCtrl->GetItemRect(nRow, rect, LVIR_BOUNDS);
-// 	rect.left += LIST_ITEM_GAP + pImageList ? LIST_ITEM_ICON_LABEL_GAP : 0;
-	if (bCalcOnly)
-		rect.right = LONG_MAX;
 	CString str = m_listCtrl->GetItemText(nRow, plvcd->iSubItem);
-	UINT nFormat = DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX | DT_VCENTER;
+	m_listCtrl->GetItemRect(nRow, rect, LVIR_LABEL);
+	if (bCalcOnly)
+	{
+		CSize szText = pDC->GetTextExtent(str);
+		rect.right = rect.left + szText.cx;
+		return;
+	}
+	BOOL bSelected = nState & LVIS_SELECTED;
 	int nOldBKMode = pDC->SetBkMode(TRANSPARENT);
 	COLORREF clrText = bSelected ? GetSysColor(COLOR_HIGHLIGHTTEXT) : m_listCtrl->GetTextColor();
 	auto clrOldText = pDC->SetTextColor(clrText);
-	if (bCalcOnly)
-		nFormat |= DT_CALCRECT;
+	
+	UINT nFormat = DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX | DT_VCENTER;
 	pDC->DrawText((LPCTSTR)str, &rect, nFormat);
 
 	pDC->SetBkMode(nOldBKMode);
@@ -858,7 +912,6 @@ BOOL CAutoCompleteWnd::NotifyKey(UINT nKey)
 	}
 
 	info.nPosStartChar = m_infoInit.nPosStartChar;
-
 	info.nItemCount = -1;
 	info.nPreSelectItem = m_listCtrl->GetCurSel();
 	info.bEatKey = FALSE;
@@ -889,6 +942,24 @@ void CAutoCompleteWnd::UpdateListItemCount(int nItemCount)
 	RecalcSizeToFitList();
 }
 
+static RECT _RectFromMonitor(HMONITOR hMonitor) {
+	MONITORINFO mi = { 0 };
+	mi.cbSize = sizeof(mi);
+	if (GetMonitorInfo(hMonitor, &mi))
+	{
+		return mi.rcWork;
+	}
+	RECT rc = { 0, 0, 0, 0 };
+	if (::SystemParametersInfoA(SPI_GETWORKAREA, 0, &rc, 0) == 0)
+	{
+		rc.left = 0;
+		rc.top = 0;
+		rc.right = 0;
+		rc.bottom = 0;
+	}
+	return rc;
+}
+
 void CAutoCompleteWnd::RecalcSizeToFitList()
 {
 	int nItemCount = m_listCtrl->GetItemCount();
@@ -906,23 +977,31 @@ void CAutoCompleteWnd::RecalcSizeToFitList()
 	}
 
 	int nVertSpacing = m_listCtrl->GetItemHeight();
-	CPoint posWnd(0,0);
-	CSize szWnd;
-	szWnd.cx = m_nMaxItemWidth; // + GetSystemMetrics(SM_CYVSCROLL);
-	szWnd.cy = nVertSpacing * m_nVisibleItems;
+	CPoint posClient(0,0);
+	CSize szClient;
+	szClient.cx = m_nMaxItemWidth; // + GetSystemMetrics(SM_CYVSCROLL);
+	szClient.cy = nVertSpacing * m_nVisibleItems;
 	UINT nFlags = SWP_NOACTIVATE;
 	BOOL bVisible = IsWindowVisible();
-	if (bVisible)
-	{
-		nFlags |= SWP_NOMOVE;
-	}
-	else
-	{
+	if (!bVisible)
 		nFlags |= SWP_SHOWWINDOW;
-		posWnd = m_infoInit.posACWndScreen;
-		posWnd.x -= rectLabel.left;
+	CWnd* pWndOwner = GetOwner();
+	posClient = m_infoInit.posWordScreen;
+	posClient.x -= rectLabel.left;
+	HMONITOR hMonitor = MonitorFromPoint(posClient, MONITOR_DEFAULTTONEAREST);
+	CRect rcPopupBounds = _RectFromMonitor(hMonitor);
+	if (rcPopupBounds.Height() == 0)
+		pWndOwner->GetClientRect(rcPopupBounds);
+	if (posClient.y >= rcPopupBounds.bottom - szClient.cy &&  // Won't fit below.
+		posClient.y >= (rcPopupBounds.bottom + rcPopupBounds.top) / 2)	// and there is more room above.
+	{
+		posClient.y = m_infoInit.posWordScreen.y - m_infoInit.nLineHeight - szClient.cy;
 	}
-	SetWindowPos(&wndTop, posWnd.x, posWnd.y, szWnd.cx, szWnd.cy, nFlags);
+	if (posClient.x + szClient.cx > rcPopupBounds.right)
+		posClient.x -= posClient.x + szClient.cx - rcPopupBounds.right;
+	CRect rect(posClient, szClient);
+	AdjustWindowRect(&rect, WS_BORDER, FALSE);
+	SetWindowPos(&wndTop, rect.left, rect.top, rect.Width(), rect.Height(), nFlags);
 }
 
 LRESULT CAutoCompleteWnd::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)

@@ -33,6 +33,8 @@ BOOL CDemoACImp<ACImpBaseT>::IsValidChar(UINT nChar) const
 {
 	if ( ACImpBaseT::IsValidChar(nChar) )
 		return TRUE;
+	if (nChar > 0xFF)
+		return FALSE;
 	switch (nChar)
 	{
 	case _T('<'):

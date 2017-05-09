@@ -27,8 +27,8 @@ typedef int		EditPosLen;
 struct AUTOCINITINFO 
 {
 	AUTOCNMHDR	hdr;
-	POINT		posACWndScreen;	// the initial position of the auto complete window
-	RECT		rcScreen;
+	CPoint		posWordScreen;	// bottom-left corner of the first character
+	long		nLineHeight;	// the height of the current line
 	int			nItemCount;		// the number of items in the list
 	int			nPreSelectItem;	// the item to be selected when display
 	int			nMaxVisibleItems;
@@ -119,6 +119,8 @@ protected:
 public:
 	bool			m_bMatchCase;
 	bool			m_bFuzzyMatch;
+	bool			m_bAllowCaretMove;	// caret move won't close the window
+	bool			m_bUpdateListAfterCaretMove;
 };
 
 //template <typename EditT>
