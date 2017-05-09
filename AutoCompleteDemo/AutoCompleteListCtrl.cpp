@@ -85,7 +85,6 @@ BEGIN_MESSAGE_MAP(CAutoCompleteListCtrl, CAutoCompleteListCtrlBase)
 	ON_WM_RBUTTONDOWN()
 	ON_WM_RBUTTONDBLCLK()
 	ON_WM_MBUTTONDOWN()
-	ON_WM_SIZE()
 	ON_WM_NCCALCSIZE()
 END_MESSAGE_MAP()
 
@@ -134,12 +133,6 @@ void CAutoCompleteListCtrl::OnRButtonDblClk(UINT nFlags, CPoint point)
 void CAutoCompleteListCtrl::OnMButtonDown(UINT nFlags, CPoint point)
 {
 	// disable the scroll wheel button click action
-}
-
-void CAutoCompleteListCtrl::OnSize(UINT nType, int cx, int cy)
-{
-	CAutoCompleteListCtrlBase::OnSize(nType, cx, cy);
-	SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 }
 
 void CAutoCompleteListCtrl::OnNcCalcSize(BOOL bCalcValidRects, NCCALCSIZE_PARAMS* lpncsp)

@@ -565,9 +565,14 @@ int CAutoCompleteWnd::GetVisibleItems() const
 
 int CAutoCompleteWnd::GetTopIndex() const
 {
+	int nTopIndex = -1;
 	if (m_listCtrl)
-		return m_listCtrl->GetTopIndex();
-	return -1;
+	{
+		nTopIndex = m_listCtrl->GetTopIndex();
+	}
+	// calling SetColumnWidth in response to WM_SIZE might cause GetTopIndex returns negative value!
+	ASSERT(nTopIndex >= 0);
+	return nTopIndex;
 }
 
 int CAutoCompleteWnd::MoveSelection(int nDelta)
@@ -721,6 +726,7 @@ void CAutoCompleteWnd::OnSize(UINT nType, int cx, int cy)
 		GetClientRect(rect);
 		UINT uiSWPFlags = SWP_NOZORDER | SWP_NOACTIVATE;
 		m_listCtrl->SetWindowPos(NULL, rect.left, rect.top, rect.Width(), rect.Height(), uiSWPFlags);
+		m_listCtrl->SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 	}
 }
 
@@ -881,7 +887,7 @@ void CAutoCompleteWnd::CustomDrawListImpl(CDC* pDC, LPNMLVCUSTOMDRAW plvcd)
 void CAutoCompleteWnd::OnDrawLabel(CDC* pDC, LPNMLVCUSTOMDRAW plvcd, UINT nState, CRect& rect, BOOL bCalcOnly)
 {
 	int nRow = (int)plvcd->nmcd.dwItemSpec;
-	CString str = m_listCtrl->GetItemText(nRow, plvcd->iSubItem);
+	CString str = m_listCtrl->GetItemText(nRow, 0);
 	m_listCtrl->GetItemRect(nRow, rect, LVIR_LABEL);
 	if (bCalcOnly)
 	{
@@ -997,7 +1003,7 @@ BOOL CAutoCompleteWnd::NotifyKey(UINT nKey)
 	else
 	{
 		UpdateListItemCount(info.nItemCount);
-		m_listCtrl->SetCurSel(info.nPreSelectItem < info.nItemCount ? info.nPreSelectItem : m_listCtrl->GetTopIndex());
+		m_listCtrl->SetCurSel(info.nPreSelectItem < info.nItemCount ? info.nPreSelectItem : GetTopIndex());
 	}
 	return info.bEatKey;
 }

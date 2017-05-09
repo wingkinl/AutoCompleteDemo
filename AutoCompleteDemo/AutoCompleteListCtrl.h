@@ -33,7 +33,6 @@ protected:
 	afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnRButtonDblClk(UINT nFlags, CPoint point);
 	afx_msg void OnMButtonDown(UINT nFlags, CPoint point);
-	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnNcCalcSize(BOOL bCalcValidRects, NCCALCSIZE_PARAMS* lpncsp);
 protected:
 	DECLARE_MESSAGE_MAP()
