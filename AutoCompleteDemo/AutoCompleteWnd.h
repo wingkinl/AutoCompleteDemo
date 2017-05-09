@@ -36,6 +36,7 @@ struct AUTOCINITINFO
 	EditPosLen	nStartStrLen;	// the pre-entered length of characters
 	CString		strStart;
 	BOOL		bDropRestOfWord;
+	HFONT		hFont;			// the font for drawing list items
 	CImageList*	pImageList;		// the image list for displaying icon
 };
 
