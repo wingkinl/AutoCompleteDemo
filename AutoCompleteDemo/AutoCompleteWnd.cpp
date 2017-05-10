@@ -50,7 +50,7 @@ BOOL CWindowACImp::HandleKey(AUTOCKEYINFO* pInfo)
 		break;
 	case VK_BACK:
 		{
-			if (nCurPos == pInfo->nPosStartChar + 1)
+			if ( nCurPos == PositionAfter(pInfo->nPosStartChar) )
 			{
 				pInfo->bClose = TRUE;
 				bIsValid = FALSE;
