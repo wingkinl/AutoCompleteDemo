@@ -5,7 +5,7 @@ Copyright(c) 2017 wingkinl (Kenny Lau)
 
 https://github.com/wingkinl/AutoCompleteDemo
 
-History: 3/21/2017 Initial version
+History: 5/10/2017 Initial version
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files(the "Software"), to deal
