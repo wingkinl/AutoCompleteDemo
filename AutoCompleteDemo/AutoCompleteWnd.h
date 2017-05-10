@@ -279,8 +279,9 @@ protected:
 
 	void RecalcSizeToFitList();
 
-	void CustomDrawListImpl(CDC* pDC, LPNMLVCUSTOMDRAW plvcd);
-	void OnDrawLabel(CDC* pDC, LPNMLVCUSTOMDRAW plvcd, UINT nState, CRect& rect, BOOL bCalcOnly = FALSE);
+	void DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct);
+	void DrawItemIcon(CDC* pDC, int nRow, CRect rect);
+	void DrawItemText(CDC* pDC, int nRow, UINT nState, CRect& rect, BOOL bCalcOnly = FALSE);
 
 	BOOL HandleKeyUpdateTransparency();
 protected:
@@ -298,16 +299,19 @@ protected:
 	BYTE						m_nAlpha;
 	bool						m_bIncreaseAlpha;
 	UINT_PTR					m_nAlphaTiimer;
+
+	CFont*						m_pFont;
 protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 
-	afx_msg void OnCustomDrawList(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnGetListDispInfo(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnListItemChange(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnListDblClk(NMHDR* pNMHDR, LRESULT* pResult);
 
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg void OnMeasureItem(int nIDCtl, LPMEASUREITEMSTRUCT lpMeasureItemStruct);
+	afx_msg void OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStruct);
 
 	LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 protected:

@@ -54,12 +54,7 @@ int CAutoCompleteListCtrl::GetItemHeight() const
 
 BOOL CAutoCompleteListCtrl::IsShowVScrollBar() const
 {
-	return m_bShowVScroll;
-}
-
-void CAutoCompleteListCtrl::SetShowVScrollBar(BOOL bShow)
-{
-	m_bShowVScroll = bShow;
+	return (GetStyle() & WS_VSCROLL);
 }
 
 int CAutoCompleteListCtrl::HitTestSelectItem(const POINT& point)
@@ -139,10 +134,6 @@ void CAutoCompleteListCtrl::OnNcCalcSize(BOOL bCalcValidRects, NCCALCSIZE_PARAMS
 {
 	DWORD dwRemove = WS_HSCROLL;
 	DWORD dwAdd = 0;
-	if (IsShowVScrollBar())
-		dwAdd |= WS_VSCROLL;
-	else
-		dwRemove |= WS_VSCROLL;
 	ModifyStyle(dwRemove, dwAdd);
 	CAutoCompleteListCtrlBase::OnNcCalcSize(bCalcValidRects, lpncsp);
 }

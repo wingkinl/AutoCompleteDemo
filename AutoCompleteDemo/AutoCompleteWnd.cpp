@@ -504,6 +504,8 @@ CAutoCompleteWnd::CAutoCompleteWnd()
 	m_nAlpha = 255;
 	m_bIncreaseAlpha = false;
 	m_nAlphaTiimer = 0;
+
+	m_pFont = &GetGlobalData()->fontTooltip;
 }
 
 CAutoCompleteWnd::~CAutoCompleteWnd()
@@ -517,11 +519,12 @@ CAutoCompleteWnd::~CAutoCompleteWnd()
 BEGIN_MESSAGE_MAP(CAutoCompleteWnd, CAutoCompleteWndBase)
 	ON_WM_CREATE()
 	ON_WM_SIZE()
-	ON_NOTIFY(NM_CUSTOMDRAW, IDC_AUTO_LIST_CTRL, &CAutoCompleteWnd::OnCustomDrawList)
 	ON_NOTIFY(LVN_GETDISPINFO, IDC_AUTO_LIST_CTRL, &CAutoCompleteWnd::OnGetListDispInfo)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_AUTO_LIST_CTRL, &CAutoCompleteWnd::OnListItemChange)
 	ON_NOTIFY(NM_DBLCLK, IDC_AUTO_LIST_CTRL, &CAutoCompleteWnd::OnListDblClk)
 	ON_WM_TIMER()
+	ON_WM_MEASUREITEM()
+	ON_WM_DRAWITEM()
 END_MESSAGE_MAP()
 
 // CAutoCompleteWnd message handlers
@@ -708,12 +711,15 @@ int CAutoCompleteWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	dwStyle |= LVS_SHAREIMAGELISTS;
 	dwStyle |= LVS_NOCOLUMNHEADER;
 	dwStyle |= LVS_OWNERDATA;
+	dwStyle |= LVS_OWNERDRAWFIXED;
 	CRect rect;
 	SetRectEmpty(rect);
 	BOOL bCreated = m_listCtrl->Create(dwStyle, rect, this, IDC_AUTO_LIST_CTRL);
 	if (!bCreated)
 		return 1;
-
+	if (m_infoInit.hFont)
+		m_pFont = CFont::FromHandle(m_infoInit.hFont);
+	m_listCtrl->SetFont(m_pFont);
 	return 0;
 }
 
@@ -726,7 +732,6 @@ void CAutoCompleteWnd::OnSize(UINT nType, int cx, int cy)
 		GetClientRect(rect);
 		UINT uiSWPFlags = SWP_NOZORDER | SWP_NOACTIVATE;
 		m_listCtrl->SetWindowPos(NULL, rect.left, rect.top, rect.Width(), rect.Height(), uiSWPFlags);
-		m_listCtrl->SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 	}
 }
 
@@ -825,35 +830,45 @@ void CAutoCompleteWnd::OnTimer(UINT_PTR nIDEvent)
 	}
 }
 
-void CAutoCompleteWnd::OnCustomDrawList(NMHDR* pNMHDR, LRESULT* pResult)
-{
-	ENSURE(pNMHDR != NULL);
-	LPNMLVCUSTOMDRAW lplvcd = (LPNMLVCUSTOMDRAW)pNMHDR;
+const CSize g_szTextPadding(4, 4);
+const CSize g_szIconPadding(4, 0);	// always vertically centered
 
-	switch (lplvcd->nmcd.dwDrawStage)
+void CAutoCompleteWnd::OnMeasureItem(int nIDCtl, LPMEASUREITEMSTRUCT lpMeasureItemStruct)
+{
+	if (nIDCtl != IDC_AUTO_LIST_CTRL)
 	{
-	case CDDS_PREPAINT:
-		*pResult = CDRF_NOTIFYITEMDRAW;
-		break;
-	case CDDS_ITEMPREPAINT:
-		{
-			CDC* pDC = CDC::FromHandle(lplvcd->nmcd.hdc);
-			CustomDrawListImpl(pDC, lplvcd);
-			*pResult = CDRF_SKIPDEFAULT;
-		}
-		break;
+		CAutoCompleteWndBase::OnMeasureItem(nIDCtl, lpMeasureItemStruct);
+		return;
 	}
+	CClientDC dc(this);
+	auto pOldFont = dc.SelectObject(m_pFont);
+	int nRow = (int)lpMeasureItemStruct->itemID;
+	TEXTMETRIC tm = {0};
+	dc.GetTextMetrics(&tm);
+	lpMeasureItemStruct->itemHeight = tm.tmHeight + g_szTextPadding.cy * 2;
+	UINT nIconHeight = (UINT)(m_szIcon.cy + g_szIconPadding.cy * 2);
+	if (nIconHeight > lpMeasureItemStruct->itemHeight)
+		lpMeasureItemStruct->itemHeight = nIconHeight;
 }
 
-void CAutoCompleteWnd::CustomDrawListImpl(CDC* pDC, LPNMLVCUSTOMDRAW plvcd)
+void CAutoCompleteWnd::OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStruct)
 {
-	NMLVCUSTOMDRAW lvcd = *plvcd;
-	// MSDN says CDIS_SELECTED is not reliable so we need to 'correct' it
-	UINT nState = m_listCtrl->GetItemState((int)plvcd->nmcd.dwItemSpec, LVIS_SELECTED);
-	BOOL bSelected = nState & LVIS_SELECTED;
-	CRect rect;
-	int nRow = (int)plvcd->nmcd.dwItemSpec;
-	m_listCtrl->GetItemRect(nRow, rect, LVIR_BOUNDS);
+	if (nIDCtl != IDC_AUTO_LIST_CTRL)
+	{
+		CAutoCompleteWndBase::OnDrawItem(nIDCtl, lpDrawItemStruct);
+		return;
+	}
+	DrawItem(lpDrawItemStruct);
+}
+
+void CAutoCompleteWnd::DrawItem(LPDRAWITEMSTRUCT pDIS)
+{
+	CDC* pDC = CDC::FromHandle(pDIS->hDC);
+
+	UINT nItemState = pDIS->itemState;
+	int nRow = (int)pDIS->itemID;
+	CRect rect = pDIS->rcItem;
+	BOOL bSelected = nItemState & ODS_SELECTED;
 	COLORREF clrBkOrig = m_listCtrl->GetBkColor();
 	COLORREF clrBk = clrBkOrig;
 	if (bSelected)
@@ -862,7 +877,13 @@ void CAutoCompleteWnd::CustomDrawListImpl(CDC* pDC, LPNMLVCUSTOMDRAW plvcd)
 	// Background
 	pDC->FillSolidRect(rect, clrBk);
 
-	// Icon
+	DrawItemIcon(pDC, nRow, rect);
+
+	DrawItemText(pDC, nRow, nItemState, rect);
+}
+
+void CAutoCompleteWnd::DrawItemIcon(CDC* pDC, int nRow, CRect rect)
+{
 	auto pImageList = m_listCtrl->GetImageList(LVSIL_SMALL);
 	if (pImageList)
 	{
@@ -871,31 +892,30 @@ void CAutoCompleteWnd::CustomDrawListImpl(CDC* pDC, LPNMLVCUSTOMDRAW plvcd)
 		item.mask = LVIF_IMAGE;
 		VERIFY(m_listCtrl->GetItem(&item));
 		int nIcon = item.iImage;
-		CRect rcIcon;
-		m_listCtrl->GetItemRect(nRow, rcIcon, LVIR_ICON);
-		CPoint pt = rcIcon.TopLeft();
-		pt.x += (rcIcon.Width() - m_szIcon.cx) / 2;
-		pt.y += (rcIcon.Height() - m_szIcon.cy) / 2;
+		rect.left += g_szIconPadding.cx;
+		CPoint pt = rect.TopLeft();
+		pt.y += (rect.Height() - m_szIcon.cy) / 2;
 		UINT nIconStyle = ILD_TRANSPARENT;
 		pImageList->Draw(pDC, nIcon, pt, nIconStyle);
 	}
-
-	// Label
-	OnDrawLabel(pDC, plvcd, nState, rect);
 }
 
-void CAutoCompleteWnd::OnDrawLabel(CDC* pDC, LPNMLVCUSTOMDRAW plvcd, UINT nState, CRect& rect, BOOL bCalcOnly)
+void CAutoCompleteWnd::DrawItemText(CDC* pDC, int nRow, UINT nState, CRect& rect, BOOL bCalcOnly)
 {
-	int nRow = (int)plvcd->nmcd.dwItemSpec;
 	CString str = m_listCtrl->GetItemText(nRow, 0);
-	m_listCtrl->GetItemRect(nRow, rect, LVIR_LABEL);
+	auto pImageList = m_listCtrl->GetImageList(LVSIL_SMALL);
+	if (pImageList)
+	{
+		rect.left += g_szIconPadding.cx + m_szIcon.cx;
+	}
+	rect.left += g_szTextPadding.cx;
 	if (bCalcOnly)
 	{
 		CSize szText = pDC->GetTextExtent(str);
-		rect.right = rect.left + szText.cx;
+		rect.right = rect.left + szText.cx + g_szTextPadding.cx;
 		return;
 	}
-	BOOL bSelected = nState & LVIS_SELECTED;
+	BOOL bSelected = nState & ODS_SELECTED;
 	int nOldBKMode = pDC->SetBkMode(TRANSPARENT);
 	COLORREF clrText = bSelected ? GetSysColor(COLOR_HIGHLIGHTTEXT) : m_listCtrl->GetTextColor();
 	auto clrOldText = pDC->SetTextColor(clrText);
@@ -1015,8 +1035,6 @@ void CAutoCompleteWnd::Close()
 
 void CAutoCompleteWnd::UpdateListItemCount(int nItemCount)
 {
-	BOOL bShowVScroll = nItemCount > m_infoInit.nMaxVisibleItems;
-	m_listCtrl->SetShowVScrollBar(bShowVScroll);
 	SetItemCount(nItemCount);
 	RecalcSizeToFitList();
 }
@@ -1046,19 +1064,25 @@ void CAutoCompleteWnd::RecalcSizeToFitList()
 	//m_nMaxItemWidth = 0;
 	m_nVisibleItems = min(m_infoInit.nMaxVisibleItems, nItemCount);
 	CClientDC dc(m_listCtrl);
+	auto pOldFont = dc.SelectObject(m_pFont);
+	CRect rectClient;
+	GetClientRect(rectClient);
 	CRect rectLabel;
 	for (int nItem = nTopItemIndex; nItem < nTopItemIndex + m_nVisibleItems; ++nItem)
 	{
-		NMLVCUSTOMDRAW lvcd = { 0 };
-		lvcd.nmcd.dwItemSpec = nItem;
-		OnDrawLabel(&dc, &lvcd, 0, rectLabel, TRUE);
+		rectLabel = rectClient;
+		rectLabel.right = LONG_MAX;
+		DrawItemText(&dc, nItem, 0, rectLabel, TRUE);
 		m_nMaxItemWidth = max(m_nMaxItemWidth, rectLabel.right);
 	}
+	dc.SelectObject(pOldFont);
 
 	int nVertSpacing = m_listCtrl->GetItemHeight();
 	CPoint posClient(0,0);
 	CSize szClient;
-	szClient.cx = m_nMaxItemWidth; // + GetSystemMetrics(SM_CYVSCROLL);
+	szClient.cx = m_nMaxItemWidth;
+	if (m_listCtrl->IsShowVScrollBar())
+		szClient.cx += GetSystemMetrics(SM_CXVSCROLL);
 	szClient.cy = nVertSpacing * m_nVisibleItems;
 	UINT nFlags = SWP_NOACTIVATE;
 	BOOL bVisible = IsWindowVisible();
@@ -1081,6 +1105,7 @@ void CAutoCompleteWnd::RecalcSizeToFitList()
 	CRect rect(posClient, szClient);
 	AdjustWindowRect(&rect, WS_BORDER, FALSE);
 	SetWindowPos(&wndTop, rect.left, rect.top, rect.Width(), rect.Height(), nFlags);
+	m_listCtrl->SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 }
 
 LRESULT CAutoCompleteWnd::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)

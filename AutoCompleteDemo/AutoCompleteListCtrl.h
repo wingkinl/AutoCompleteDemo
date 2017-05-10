@@ -19,7 +19,6 @@ public:
 	int GetItemHeight() const;
 
 	BOOL IsShowVScrollBar() const;
-	void SetShowVScrollBar(BOOL bShow);
 protected:
 	int HitTestSelectItem(const POINT& point);
 	void PostNcDestroy() override;
