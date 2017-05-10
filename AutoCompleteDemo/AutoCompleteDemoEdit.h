@@ -71,6 +71,8 @@ int CDemoACImp<ACImpBaseT>::UpdateFilteredList(LPCTSTR pszFilterText)
 {
 	m_bFuzzyMatch = theApp.m_bFuzzyMatch;
 	m_bMatchCase = theApp.m_bMatchCase;
+	if ((int)_tcslen(pszFilterText) > theApp.m_nMaxTextLen)
+		return 0;
 	return ACImpBaseT::UpdateFilteredList(pszFilterText);
 }
 

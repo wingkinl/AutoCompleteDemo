@@ -45,13 +45,6 @@ void CAutoCompleteListCtrl::SetCurSel(int nItem)
 	SetItemState(nItem, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
 }
 
-int CAutoCompleteListCtrl::GetItemHeight() const
-{
-	int nHorzSpacing = 0, nVertSpacing = 0;
-	GetItemSpacing(TRUE, &nHorzSpacing, &nVertSpacing);
-	return nVertSpacing;
-}
-
 BOOL CAutoCompleteListCtrl::IsShowVScrollBar() const
 {
 	return (GetStyle() & WS_VSCROLL);

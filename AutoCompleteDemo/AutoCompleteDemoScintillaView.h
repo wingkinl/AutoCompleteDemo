@@ -23,11 +23,14 @@ public:
 	virtual void Dump(CDumpContext& dc) const;
 #endif
 #endif
-	void OnCharAdded(SCNotification* pSCNotification) override;
+
+	std::unique_ptr<CScintillaCtrl> CreateControl() override;
+
+	//void OnCharAdded(SCNotification* pSCNotification) override;
 protected:
-	CDemoScintillaACImp	m_acImp;
+	//CDemoScintillaACImp	m_acImp;
 protected:
-	afx_msg LRESULT OnACNotify(WPARAM wp, LPARAM lp);
+	//afx_msg LRESULT OnACNotify(WPARAM wp, LPARAM lp);
 protected:
 	DECLARE_MESSAGE_MAP()
 };

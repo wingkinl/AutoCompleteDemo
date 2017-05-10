@@ -12,7 +12,7 @@ IMPLEMENT_DYNCREATE(CAutoCompleteDemoScintillaView, CAutoCompleteDemoScintillaVi
 
 CAutoCompleteDemoScintillaView::CAutoCompleteDemoScintillaView()
 {
-	m_acImp.m_pEdit = &GetCtrl();
+	//m_acImp.m_pEdit = &GetCtrl();
 }
 
 CAutoCompleteDemoScintillaView::~CAutoCompleteDemoScintillaView()
@@ -20,7 +20,7 @@ CAutoCompleteDemoScintillaView::~CAutoCompleteDemoScintillaView()
 }
 
 BEGIN_MESSAGE_MAP(CAutoCompleteDemoScintillaView, CAutoCompleteDemoScintillaViewBase)
-	ON_MESSAGE(WM_AC_NOTIFY, &CAutoCompleteDemoScintillaView::OnACNotify)
+	//ON_MESSAGE(WM_AC_NOTIFY, &CAutoCompleteDemoScintillaView::OnACNotify)
 END_MESSAGE_MAP()
 
 
@@ -49,20 +49,68 @@ void CAutoCompleteDemoScintillaView::Dump(CDumpContext& dc) const
 #endif
 #endif //_DEBUG
 
-
-
-void CAutoCompleteDemoScintillaView::OnCharAdded(SCNotification* pSCNotification)
+class CAutoCompleteDemoScintillaCtrl : public CScintillaCtrl
 {
-	CAutoCompleteDemoScintillaViewBase::OnCharAdded(pSCNotification);
-	CAutoCompleteWnd::Activate(this, pSCNotification->ch);
+public:
+	CAutoCompleteDemoScintillaCtrl();
+	~CAutoCompleteDemoScintillaCtrl();
+
+protected:
+	CDemoScintillaACImp	m_acImp;
+protected:
+	afx_msg void OnChar(UINT nChar, UINT nRepCnt, UINT nFlags);
+	afx_msg LRESULT OnACNotify(WPARAM wp, LPARAM lp);
+
+	DECLARE_MESSAGE_MAP()
+};
+
+CAutoCompleteDemoScintillaCtrl::CAutoCompleteDemoScintillaCtrl()
+{
+	m_acImp.m_pEdit = this;
 }
 
-// CAutoCompleteDemoScintillaView message handlers
+CAutoCompleteDemoScintillaCtrl::~CAutoCompleteDemoScintillaCtrl()
+{
 
-LRESULT CAutoCompleteDemoScintillaView::OnACNotify(WPARAM wp, LPARAM lp)
+}
+
+BEGIN_MESSAGE_MAP(CAutoCompleteDemoScintillaCtrl, CScintillaCtrl)
+	ON_WM_CHAR()
+	ON_MESSAGE(WM_AC_NOTIFY, &CAutoCompleteDemoScintillaCtrl::OnACNotify)
+END_MESSAGE_MAP()
+
+void CAutoCompleteDemoScintillaCtrl::OnChar(UINT nChar, UINT nRepCnt, UINT nFlags)
+{
+	CScintillaCtrl::OnChar(nChar, nRepCnt, nFlags);
+	CAutoCompleteWnd::Activate(this, nChar);
+}
+
+LRESULT CAutoCompleteDemoScintillaCtrl::OnACNotify(WPARAM wp, LPARAM lp)
 {
 	return m_acImp.OnACNotify(wp, lp);
 }
+
+std::unique_ptr<CScintillaCtrl> CAutoCompleteDemoScintillaView::CreateControl()
+{
+#if _MSC_VER >= 1800
+	return std::make_unique<CAutoCompleteDemoScintillaCtrl>();
+#else
+	return std::unique_ptr<CAutoCompleteDemoScintillaCtrl>(new CAutoCompleteDemoScintillaCtrl());
+#endif
+}
+
+// void CAutoCompleteDemoScintillaView::OnCharAdded(SCNotification* pSCNotification)
+// {
+// 	CAutoCompleteDemoScintillaViewBase::OnCharAdded(pSCNotification);
+// 	CAutoCompleteWnd::Activate(this, pSCNotification->ch);
+// }
+
+// CAutoCompleteDemoScintillaView message handlers
+
+// LRESULT CAutoCompleteDemoScintillaView::OnACNotify(WPARAM wp, LPARAM lp)
+// {
+// 	return m_acImp.OnACNotify(wp, lp);
+// }
 
 
 #endif // _ENABLE_SCINTILLA_BUILD

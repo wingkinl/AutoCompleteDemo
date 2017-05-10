@@ -34,6 +34,7 @@ public:
 
 	CString			m_strPath;
 	CStringArray	m_saTestList;
+	int				m_nMaxTextLen;
 	CImageList		m_imgList;
 	bool			m_bMatchCase;
 	bool			m_bFuzzyMatch;

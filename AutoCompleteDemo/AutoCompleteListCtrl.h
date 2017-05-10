@@ -16,8 +16,6 @@ public:
 	int GetCurSel() const;
 	void SetCurSel(int nItem);
 
-	int GetItemHeight() const;
-
 	BOOL IsShowVScrollBar() const;
 protected:
 	int HitTestSelectItem(const POINT& point);

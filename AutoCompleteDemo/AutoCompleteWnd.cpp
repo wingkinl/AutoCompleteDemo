@@ -33,20 +33,24 @@ BOOL CWindowACImp::IsValidChar(UINT nChar) const
 	return 0 < nChar && nChar <= 0xFF && _istalnum(nChar);
 }
 
-BOOL CWindowACImp::HandleKey(AUTOCKEYINFO* pInfo, CString& strText)
+BOOL CWindowACImp::HandleKey(AUTOCKEYINFO* pInfo)
 {
+	CString strText;
 	BOOL bIsValid = TRUE;
 	BOOL bAppendChar = FALSE;
 	BOOL bUpdateList = TRUE;
+	BOOL bCheckText = TRUE;
 	int nMoveCaret = 0;
+	auto nCurPos = GetCaretPos();
 	switch (pInfo->nKey)
 	{
 	case VK_DELETE:
+		bCheckText = FALSE;
+		bUpdateList = FALSE;
 		break;
 	case VK_BACK:
 		{
-			auto nCaretPos = GetCaretPos();
-			if (nCaretPos == pInfo->nPosStartChar + 1)
+			if (nCurPos == pInfo->nPosStartChar + 1)
 			{
 				pInfo->bClose = TRUE;
 				bIsValid = FALSE;
@@ -59,9 +63,33 @@ BOOL CWindowACImp::HandleKey(AUTOCKEYINFO* pInfo, CString& strText)
 		break;
 	case VK_LEFT:
 	case VK_RIGHT:
-		bIsValid = m_bAllowCaretMove;
-		nMoveCaret = pInfo->nKey == VK_RIGHT ? 1 : -1;
-		bUpdateList = m_bUpdateListAfterCaretMove;
+		bIsValid = m_bAllowCaretMove && !(GetKeyState(VK_CONTROL) < 0);
+		if (bIsValid)
+		{
+			nMoveCaret = pInfo->nKey == VK_RIGHT ? 1 : -1;
+			EditPosLen nNewPos = nCurPos;
+			if (pInfo->nKey == VK_RIGHT)
+			{
+				nNewPos = PositionAfter(nCurPos);
+				auto nLineEnd = GetLineEndPosition(pInfo->nStartLine);
+				// if already the end of document, then no update
+				if (nNewPos == nCurPos)
+				{
+					nMoveCaret = 0;
+					bCheckText = FALSE;
+				}
+				else if (nNewPos > nLineEnd)
+					bIsValid = FALSE;
+			}
+			else
+			{
+				nNewPos = PositionBefore(nCurPos);
+				if (nNewPos < pInfo->nPosStartChar)
+					bIsValid = FALSE;
+			}
+			nCurPos = nNewPos;
+			bUpdateList = m_bUpdateListAfterCaretMove;
+		}
 		break;
 	default:
 		bIsValid = IsValidChar(pInfo->nChar);
@@ -70,15 +98,9 @@ BOOL CWindowACImp::HandleKey(AUTOCKEYINFO* pInfo, CString& strText)
 	}
 	if (bIsValid)
 	{
-		auto nCurPos = GetCaretPos() + nMoveCaret;
-		if (pInfo->nPosStartChar < nCurPos)
+		if (bCheckText && pInfo->nPosStartChar < nCurPos)
 			GetRangeText(strText, pInfo->nPosStartChar, nCurPos);
-		if (nMoveCaret < 0)
-		{
-			if (nCurPos < pInfo->nPosStartChar)
-				bIsValid = FALSE;
-		}
-		else if (nMoveCaret > 0)
+		if (nMoveCaret > 0)
 		{
 			int nLen = strText.GetLength();
 			for (int nn = nLen-nMoveCaret; nn >= 0; --nn)
@@ -131,8 +153,7 @@ LRESULT CWindowACImp::OnACNotify(WPARAM wp, LPARAM lp)
 	case ACCmdKey:
 		{
 			AUTOCKEYINFO* pInfo = (AUTOCKEYINFO*)nmhdr;
-			CString strText;
-			HandleKey(pInfo, strText);
+			HandleKey(pInfo);
 			return TRUE; // message processed
 		}
 	case ACCmdComplete:
@@ -211,6 +232,18 @@ int CWindowACImp::UpdateFilteredList(LPCTSTR pszFilterText)
 	return (int)m_arrFilteredIndices.GetSize();
 }
 
+EditPosLen CWindowACImp::PositionBefore(EditPosLen nPos) const
+{
+	if (nPos == 0)
+		return 0;
+	return --nPos;
+}
+
+EditPosLen CWindowACImp::PositionAfter(EditPosLen nPos) const
+{
+	return ++nPos;
+}
+
 /************************************************************************/
 /* CEditACImp
 /************************************************************************/
@@ -258,6 +291,8 @@ BOOL CEditACImp::GetInitInfo(AUTOCINITINFO* pInfo)
 
 	if (pInfo->nStartStrLen == 0)
 		return FALSE;
+	pInfo->nStartLine = nCurLine;
+
 	// note: PosFromChar returns top-left corner of a given character
 	pInfo->posWordScreen = PosFromChar(pInfo->nPosStartChar);
 	m_pEdit->ClientToScreen(&pInfo->posWordScreen);
@@ -345,13 +380,33 @@ EditPosLen CEditACImp::GetCaretPos() const
 	return (EditPosLen)nSelStartChar;
 }
 
+int CEditACImp::LineFromPosition(EditPosLen nPos) const
+{
+	return LineFromChar(nPos);
+}
+
+EditPosLen CEditACImp::PositionAfter(EditPosLen nPos) const
+{
+	int nLen = m_pEdit->GetWindowTextLength();
+	if (nPos <= nLen-1)
+		++nPos;
+	return nPos;
+}
+
+EditPosLen CEditACImp::GetLineEndPosition(int nLine) const
+{
+	int nCurLineStartChar = LineIndex(nLine);
+	int nLineLen = LineLength(nCurLineStartChar);
+	return nCurLineStartChar + nLineLen;
+}
+
 void CEditACImp::GetLineText(int nLineIndex, CString& strLine, int nLineLen) const
 {
 	auto pszLine = strLine.GetBufferSetLength(nLineLen + 1);
 	*(LPWORD)pszLine = (WORD)nLineLen;
 	GetLine(nLineIndex, (LPTSTR)pszLine);
 	strLine.SetAt(nLineLen, _T('\0'));
-	strLine.ReleaseBuffer(nLineLen + 1);
+	strLine.ReleaseBuffer(nLineLen);
 }
 
 /************************************************************************/
@@ -396,6 +451,7 @@ BOOL CScintillaACImp::GetInitInfo(AUTOCINITINFO* pInfo)
 
 	if (pInfo->nStartStrLen == 0)
 		return FALSE;
+	pInfo->nStartLine = nCurLine;
 	pInfo->posWordScreen.x = m_pEdit->PointXFromPosition(pInfo->nPosStartChar);
 	pInfo->posWordScreen.y = m_pEdit->PointYFromPosition(pInfo->nPosStartChar);
 	m_pEdit->ClientToScreen(&pInfo->posWordScreen);
@@ -410,7 +466,7 @@ BOOL CScintillaACImp::AutoComplete(AUTOCCOMPLETE* pInfo)
 	if (pInfo->bDropRestOfWord)
 	{
 		int nCurLine = m_pEdit->LineFromPosition(nEndCharPos);
-		auto nLineEndPos = m_pEdit->GetLineEndPosition(nEndCharPos);
+		auto nLineEndPos = m_pEdit->GetLineEndPosition(nCurLine);
 		auto nCharPos = nEndCharPos;
 		auto nDocEnd = m_pEdit->GetLength();
 		while (nCharPos < nLineEndPos)
@@ -484,6 +540,26 @@ EditPosLen CScintillaACImp::GetCaretPos() const
 {
 	return (EditPosLen)m_pEdit->GetCurrentPos();
 }
+
+EditPosLen CScintillaACImp::PositionBefore(EditPosLen nPos) const
+{
+	return (EditPosLen)m_pEdit->PositionBefore(nPos);
+}
+
+EditPosLen CScintillaACImp::PositionAfter(EditPosLen nPos) const
+{
+	return (EditPosLen)m_pEdit->PositionAfter(nPos);
+}
+
+int CScintillaACImp::LineFromPosition(EditPosLen nPos) const
+{
+	return m_pEdit->LineFromPosition(nPos);
+}
+
+EditPosLen CScintillaACImp::GetLineEndPosition(int nLine) const
+{
+	return (EditPosLen)m_pEdit->GetLineEndPosition(nLine);
+}
 #endif // _ENABLE_SCINTILLA_BUILD
 
 /************************************************************************/
@@ -506,6 +582,7 @@ CAutoCompleteWnd::CAutoCompleteWnd()
 	m_nAlphaTiimer = 0;
 
 	m_pFont = &GetGlobalData()->fontTooltip;
+	m_nItemHeight = -1;
 }
 
 CAutoCompleteWnd::~CAutoCompleteWnd()
@@ -588,7 +665,7 @@ int CAutoCompleteWnd::MoveSelection(int nDelta)
 	if (nCurSelItem < nTopItemIndex || nCurSelItem >= nTopItemIndex + GetVisibleItems())
 	{
 		//m_listCtrl->EnsureVisible(nCurSelItem, FALSE);
-		CSize szScroll(0, m_listCtrl->GetItemHeight()* (nCurSelItem-nOldSelItem));
+		CSize szScroll(0, GetItemHeight()* (nCurSelItem-nOldSelItem));
 		m_listCtrl->Scroll(szScroll);
 		RecalcSizeToFitList();
 	}
@@ -840,15 +917,7 @@ void CAutoCompleteWnd::OnMeasureItem(int nIDCtl, LPMEASUREITEMSTRUCT lpMeasureIt
 		CAutoCompleteWndBase::OnMeasureItem(nIDCtl, lpMeasureItemStruct);
 		return;
 	}
-	CClientDC dc(this);
-	auto pOldFont = dc.SelectObject(m_pFont);
-	int nRow = (int)lpMeasureItemStruct->itemID;
-	TEXTMETRIC tm = {0};
-	dc.GetTextMetrics(&tm);
-	lpMeasureItemStruct->itemHeight = tm.tmHeight + g_szTextPadding.cy * 2;
-	UINT nIconHeight = (UINT)(m_szIcon.cy + g_szIconPadding.cy * 2);
-	if (nIconHeight > lpMeasureItemStruct->itemHeight)
-		lpMeasureItemStruct->itemHeight = nIconHeight;
+	lpMeasureItemStruct->itemHeight = GetItemHeight();
 }
 
 void CAutoCompleteWnd::OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStruct)
@@ -1011,6 +1080,7 @@ BOOL CAutoCompleteWnd::NotifyKey(UINT nKey)
 	}
 
 	info.nPosStartChar = m_infoInit.nPosStartChar;
+	info.nStartLine = m_infoInit.nStartLine;
 	info.nItemCount = -1;
 	info.nPreSelectItem = m_listCtrl->GetCurSel();
 	info.bEatKey = FALSE;
@@ -1020,7 +1090,7 @@ BOOL CAutoCompleteWnd::NotifyKey(UINT nKey)
 	{
 		Close();
 	}
-	else
+	else if (info.nItemCount > 0)
 	{
 		UpdateListItemCount(info.nItemCount);
 		m_listCtrl->SetCurSel(info.nPreSelectItem < info.nItemCount ? info.nPreSelectItem : GetTopIndex());
@@ -1077,7 +1147,7 @@ void CAutoCompleteWnd::RecalcSizeToFitList()
 	}
 	dc.SelectObject(pOldFont);
 
-	int nVertSpacing = m_listCtrl->GetItemHeight();
+	int nVertSpacing = GetItemHeight();
 	CPoint posClient(0,0);
 	CSize szClient;
 	szClient.cx = m_nMaxItemWidth;
@@ -1106,6 +1176,22 @@ void CAutoCompleteWnd::RecalcSizeToFitList()
 	AdjustWindowRect(&rect, WS_BORDER, FALSE);
 	SetWindowPos(&wndTop, rect.left, rect.top, rect.Width(), rect.Height(), nFlags);
 	m_listCtrl->SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
+}
+
+int CAutoCompleteWnd::GetItemHeight()
+{
+	if (m_nItemHeight < 0)
+	{
+		CClientDC dc(this);
+		auto pOldFont = dc.SelectObject(m_pFont);
+		TEXTMETRIC tm = { 0 };
+		dc.GetTextMetrics(&tm);
+		m_nItemHeight = tm.tmHeight + g_szTextPadding.cy * 2;
+		int nIconHeight = m_szIcon.cy + g_szIconPadding.cy * 2;
+		if (nIconHeight > m_nItemHeight)
+			m_nItemHeight = nIconHeight;
+	}
+	return m_nItemHeight;
 }
 
 LRESULT CAutoCompleteWnd::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)

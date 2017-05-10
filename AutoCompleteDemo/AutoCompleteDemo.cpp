@@ -53,6 +53,7 @@ CAutoCompleteDemoApp::CAutoCompleteDemoApp()
 	m_bDuringInit = true;
 	m_bMatchCase = false;
 	m_bFuzzyMatch = true;
+	m_nMaxTextLen = 0;
 }
 
 // The one and only CAutoCompleteDemoApp object
@@ -242,7 +243,10 @@ BOOL CAutoCompleteDemoApp::InitInstance()
 				HICON hIcon = GetAssociatedFileIcon((LPCTSTR)strFindPath);
 				if (hIcon)
 				{
-					m_saTestList.Add(fd.cFileName);
+					CString strFileName = fd.cFileName;
+					if (strFileName.GetLength() > m_nMaxTextLen)
+						m_nMaxTextLen = strFileName.GetLength();
+					m_saTestList.Add(strFileName);
 					m_imgList.Add(hIcon);
 					DestroyIcon(hIcon);
 				}

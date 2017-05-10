@@ -32,6 +32,7 @@ struct AUTOCINITINFO
 	int			nItemCount;		// the number of items in the list
 	int			nPreSelectItem;	// the item to be selected when display
 	int			nMaxVisibleItems;
+	int			nStartLine;		// the line index
 	EditPosLen	nPosStartChar;	// the position of the first character in editor
 	EditPosLen	nStartStrLen;	// the pre-entered length of characters
 	CString		strStart;
@@ -64,6 +65,7 @@ struct AUTOCKEYINFO
 {
 	AUTOCNMHDR	hdr;
 	EditPosLen	nPosStartChar;
+	int			nStartLine;
 	UINT		nKey;
 	UINT		nChar;
 
@@ -99,7 +101,7 @@ public:
 	virtual BOOL GetInitInfo(AUTOCINITINFO* pInfo) = 0;
 	virtual BOOL IsValidChar(UINT nChar) const;
 
-	virtual BOOL HandleKey(AUTOCKEYINFO* pInfo, CString& strText);
+	virtual BOOL HandleKey(AUTOCKEYINFO* pInfo);
 	virtual BOOL AutoComplete(AUTOCCOMPLETE* pInfo) = 0;
 
 	virtual BOOL GetRangeText(CString& strText, EditPosLen nStart, EditPosLen nEnd) const = 0;
@@ -115,6 +117,11 @@ public:
 	virtual BOOL GetDisplayInfo(AUTOCNMHDR* nmhdr) const;
 
 	virtual int UpdateFilteredList(LPCTSTR pszFilterText);
+
+	virtual EditPosLen PositionBefore(EditPosLen nPos) const;
+	virtual EditPosLen PositionAfter(EditPosLen nPos) const;
+	virtual int LineFromPosition(EditPosLen nPos) const = 0;
+	virtual EditPosLen GetLineEndPosition(int nLine) const = 0;
 protected:
 	CArray<int>		m_arrFilteredIndices;
 public:
@@ -136,6 +143,9 @@ public:
 
 	BOOL		GetRangeText(CString& strText, EditPosLen nStart, EditPosLen nEnd) const override;
 	EditPosLen	GetCaretPos() const override;
+	int			LineFromPosition(EditPosLen nPos) const override;
+	EditPosLen PositionAfter(EditPosLen nPos) const override;
+	EditPosLen GetLineEndPosition(int nLine) const override;
 protected:
 	inline int GetLineCount() const
 	{
@@ -227,6 +237,11 @@ public:
 
 	BOOL		GetRangeText(CString& strText, EditPosLen nStart, EditPosLen nEnd) const override;
 	EditPosLen	GetCaretPos() const override;
+
+	EditPosLen PositionBefore(EditPosLen nPos) const override;
+	EditPosLen PositionAfter(EditPosLen nPos) const override;
+	int			LineFromPosition(EditPosLen nPos) const override;
+	EditPosLen GetLineEndPosition(int nLine) const override;
 public:
 	CScintillaCtrl*	m_pEdit;
 };
@@ -279,6 +294,8 @@ protected:
 
 	void RecalcSizeToFitList();
 
+	int GetItemHeight();
+
 	void DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct);
 	void DrawItemIcon(CDC* pDC, int nRow, CRect rect);
 	void DrawItemText(CDC* pDC, int nRow, UINT nState, CRect& rect, BOOL bCalcOnly = FALSE);
@@ -301,6 +318,7 @@ protected:
 	UINT_PTR					m_nAlphaTiimer;
 
 	CFont*						m_pFont;
+	int							m_nItemHeight;
 protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
