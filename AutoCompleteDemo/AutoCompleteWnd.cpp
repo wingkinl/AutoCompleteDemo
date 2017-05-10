@@ -457,6 +457,26 @@ BOOL CScintillaACImp::GetInitInfo(AUTOCINITINFO* pInfo)
 	m_pEdit->ClientToScreen(&pInfo->posWordScreen);
 	pInfo->nLineHeight = m_pEdit->TextHeight(nCurLine);
 	pInfo->posWordScreen.y += pInfo->nLineHeight + 1;
+	if (m_font.GetSafeHandle())
+	{
+		m_font.DeleteObject();
+	}
+	LOGFONT lf = {0};
+	int style = STYLE_DEFAULT;
+	_tcsncpy(lf.lfFaceName, m_pEdit->StyleGetFont(style), _countof(lf.lfFaceName));
+
+	lf.lfCharSet	= (BYTE)m_pEdit->StyleGetCharacterSet(style);
+
+	CClientDC dc(m_pEdit);
+	//int nHeight		= -MulDiv(m_pEdit->StyleGetSize(style), dc.GetDeviceCaps(LOGPIXELSY), 72);
+	//lf.lfHeight		= nHeight;
+	lf.lfHeight = pInfo->nLineHeight;
+
+	// NOTE: the weight here is NOT an accurate value!
+	lf.lfWeight		= m_pEdit->StyleGetBold(style) ? FW_BOLD : FW_NORMAL;
+
+	m_font.CreateFontIndirect(&lf);
+	pInfo->hFont = (HFONT)m_font.GetSafeHandle();
 	return TRUE;
 }
 
@@ -576,7 +596,6 @@ CAutoCompleteWnd::CAutoCompleteWnd()
 	m_infoInit.nMaxVisibleItems = AC_DEFAULT_MAX_VISIBLE_ITEM;
 	m_nVisibleItems = AC_DEFAULT_MAX_VISIBLE_ITEM;
 	m_nMaxItemWidth = 0;
-	m_bReady = false;
 	m_nAlpha = 255;
 	m_bIncreaseAlpha = false;
 	m_nAlphaTiimer = 0;
@@ -608,16 +627,17 @@ END_MESSAGE_MAP()
 
 BOOL CAutoCompleteWnd::Create(CWnd* pOwner, const AUTOCINITINFO& info)
 {
+	m_infoInit = info;
+	if (m_infoInit.hFont)
+		m_pFont = CFont::FromHandle(m_infoInit.hFont);
 	BOOL bCreated = CAutoCompleteWndBase::Create(pOwner, info.posWordScreen);
 	if (!bCreated)
 		return FALSE;
 	SetOwner(pOwner);
-	m_infoInit = info;
 	if (info.pImageList)
 		SetImageList(info.pImageList);
 	UpdateListItemCount(info.nItemCount);
 	m_listCtrl->SetCurSel(info.nPreSelectItem < info.nItemCount ?  info.nPreSelectItem : 0);
-	m_bReady = true;
 	ModifyStyleEx(0, WS_EX_LAYERED);
 	return bCreated;
 }
@@ -800,8 +820,6 @@ int CAutoCompleteWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	BOOL bCreated = m_listCtrl->Create(dwStyle, rect, this, IDC_AUTO_LIST_CTRL);
 	if (!bCreated)
 		return 1;
-	if (m_infoInit.hFont)
-		m_pFont = CFont::FromHandle(m_infoInit.hFont);
 	m_listCtrl->SetFont(m_pFont);
 	return 0;
 }
@@ -856,7 +874,7 @@ void CAutoCompleteWnd::OnGetListDispInfo(NMHDR* pNMHDR, LRESULT* pResult)
 void CAutoCompleteWnd::OnListItemChange(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	NM_LISTVIEW* pNMLV = (NM_LISTVIEW*)pNMHDR;
-	if ( m_bReady && (pNMLV->uChanged & LVIF_STATE) && (pNMLV->uNewState & LVIS_SELECTED) )
+	if ( (pNMLV->uChanged & LVIF_STATE) && (pNMLV->uNewState & LVIS_SELECTED) )
 	{
 		AUTOCSELCHANGEINFO info = { 0 };
 		PrepareNotifyHeader((AUTOCNMHDR*)&info);

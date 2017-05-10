@@ -1,8 +1,12 @@
 #pragma once
 
+#ifndef SYNCPOPUPWND_EXT_CLASS
+	#define SYNCPOPUPWND_EXT_CLASS
+#endif
+
 typedef CWnd	CSyncPopupWndBase;
 
-class CSyncPopupWnd : public CWnd
+class SYNCPOPUPWND_EXT_CLASS CSyncPopupWnd : public CWnd
 {
 	DECLARE_DYNAMIC(CSyncPopupWnd)
 public:

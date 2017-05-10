@@ -2,6 +2,10 @@
 
 #include "SyncPopupWnd.h"
 
+#ifndef ACWND_EXT_CLASS
+	#define ACWND_EXT_CLASS
+#endif
+
 enum ACCmd
 {
 	ACCmdGetInitInfo,		// return non-zero to show the window
@@ -92,7 +96,7 @@ struct AUTOCCOMPLETE
 	CString		strText;
 };
 
-class CWindowACImp
+class ACWND_EXT_CLASS CWindowACImp
 {
 public:
 	CWindowACImp();
@@ -132,7 +136,7 @@ public:
 };
 
 //template <typename EditT>
-class CEditACImp : public CWindowACImp
+class ACWND_EXT_CLASS CEditACImp : public CWindowACImp
 {
 public:
 	CEditACImp();
@@ -226,7 +230,7 @@ public:
 #ifdef _ENABLE_SCINTILLA_BUILD
 class CScintillaCtrl;
 
-class CScintillaACImp : public CWindowACImp
+class ACWND_EXT_CLASS CScintillaACImp : public CWindowACImp
 {
 public:
 	CScintillaACImp(CScintillaCtrl* pCtrl = nullptr);
@@ -244,6 +248,7 @@ public:
 	EditPosLen GetLineEndPosition(int nLine) const override;
 public:
 	CScintillaCtrl*	m_pEdit;
+	CFont			m_font;
 };
 #endif // _ENABLE_SCINTILLA_BUILD
 
@@ -253,7 +258,7 @@ class CAutoCompleteListCtrl;
 
 typedef CSyncPopupWnd	CAutoCompleteWndBase;
 
-class CAutoCompleteWnd : public CAutoCompleteWndBase
+class ACWND_EXT_CLASS CAutoCompleteWnd : public CAutoCompleteWndBase
 {
 	DECLARE_DYNAMIC(CAutoCompleteWnd)
 public:
@@ -312,7 +317,6 @@ protected:
 	CSize						m_szIcon;
 	int							m_nVisibleItems;
 	int							m_nMaxItemWidth;
-	bool						m_bReady;
 
 	BYTE						m_nAlpha;
 	bool						m_bIncreaseAlpha;

@@ -1,6 +1,10 @@
 #pragma once
 
-class CSyncPopupFrameImpl
+#ifndef SYNCPOPUPFRAMEIMPL_EXT_CLASS
+	#define SYNCPOPUPFRAMEIMPL_EXT_CLASS
+#endif
+
+class SYNCPOPUPFRAMEIMPL_EXT_CLASS CSyncPopupFrameImpl
 {
 public:
 	CSyncPopupFrameImpl(CFrameWnd* pFrame);

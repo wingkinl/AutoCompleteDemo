@@ -1,10 +1,14 @@
 #pragma once
 
+#ifndef ACLISTCTRL_EXT_CLASS
+	#define ACLISTCTRL_EXT_CLASS
+#endif
+
 // CAutoCompleteListCtrl
 
 typedef CListCtrl	CAutoCompleteListCtrlBase;
 
-class CAutoCompleteListCtrl : public CAutoCompleteListCtrlBase
+class ACLISTCTRL_EXT_CLASS CAutoCompleteListCtrl : public CAutoCompleteListCtrlBase
 {
 	DECLARE_DYNAMIC(CAutoCompleteListCtrl)
 public:

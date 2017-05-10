@@ -25,7 +25,6 @@ BOOL CDemoACImp<ACImpBaseT>::GetInitInfo(AUTOCINITINFO* pInfo)
 	if (!ACImpBaseT::GetInitInfo(pInfo))
 		return FALSE;
 	pInfo->pImageList = &theApp.m_imgList;
-	pInfo->hFont = (HFONT)GetGlobalData()->fontTooltip.GetSafeHandle();
 	return TRUE;
 }
 
