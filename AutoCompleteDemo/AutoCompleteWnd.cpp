@@ -714,7 +714,8 @@ BOOL CAutoCompleteWnd::IsActiveOwner(CWnd* pWnd)
 	return GetOwner()->GetSafeHwnd() == pWnd->GetSafeHwnd();
 }
 
-BOOL CAutoCompleteWnd::Activate(CWnd* pOwner, UINT nChar)
+// this current implementation does not need nChar for now
+BOOL CAutoCompleteWnd::Activate(CWnd* pOwner, UINT /*nChar*/)
 {
 	if ( GetActiveInstance() )
 	{
@@ -736,6 +737,11 @@ BOOL CAutoCompleteWnd::Activate(CWnd* pOwner, UINT nChar)
 	CAutoCompleteWnd* pACWnd = new CAutoCompleteWnd;
 	BOOL bCreated = pACWnd->Create(pOwner, info);
 	return bCreated;
+}
+
+BOOL CAutoCompleteWnd::Show(CWnd* pOwner)
+{
+	return Activate(pOwner, (UINT)-1);
 }
 
 BOOL CAutoCompleteWnd::Cancel()

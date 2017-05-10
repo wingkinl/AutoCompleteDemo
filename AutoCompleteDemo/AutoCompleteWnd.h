@@ -277,6 +277,7 @@ public:
 public:
 	static CAutoCompleteWnd*	GetActiveInstance();
 	static BOOL					Activate(CWnd* pOwner, UINT nChar);
+	static BOOL					Show(CWnd* pOwner);
 	static BOOL					Cancel();
 protected:
 	virtual CAutoCompleteListCtrl* CreateListCtrl();

@@ -21,6 +21,7 @@ CAutoCompleteDemoScintillaView::~CAutoCompleteDemoScintillaView()
 
 BEGIN_MESSAGE_MAP(CAutoCompleteDemoScintillaView, CAutoCompleteDemoScintillaViewBase)
 	//ON_MESSAGE(WM_AC_NOTIFY, &CAutoCompleteDemoScintillaView::OnACNotify)
+	ON_COMMAND(ID_EDIT_LISTMEMBER, &OnListMember)
 END_MESSAGE_MAP()
 
 
@@ -60,6 +61,7 @@ protected:
 protected:
 	afx_msg void OnChar(UINT nChar, UINT nRepCnt, UINT nFlags);
 	afx_msg LRESULT OnACNotify(WPARAM wp, LPARAM lp);
+	afx_msg void OnListMember();
 
 	DECLARE_MESSAGE_MAP()
 };
@@ -97,6 +99,11 @@ std::unique_ptr<CScintillaCtrl> CAutoCompleteDemoScintillaView::CreateControl()
 #else
 	return std::unique_ptr<CAutoCompleteDemoScintillaCtrl>(new CAutoCompleteDemoScintillaCtrl());
 #endif
+}
+
+void CAutoCompleteDemoScintillaView::OnListMember()
+{
+	CAutoCompleteWnd::Show(&GetCtrl());
 }
 
 // void CAutoCompleteDemoScintillaView::OnCharAdded(SCNotification* pSCNotification)

@@ -30,6 +30,7 @@ public:
 protected:
 	//CDemoScintillaACImp	m_acImp;
 protected:
+	afx_msg void OnListMember();
 	//afx_msg LRESULT OnACNotify(WPARAM wp, LPARAM lp);
 protected:
 	DECLARE_MESSAGE_MAP()
