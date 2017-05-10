@@ -14,5 +14,6 @@ public:
 protected:
 	BOOL ProcessKeyboard(UINT message, int nKey);
 	BOOL ProcessMouseClick(UINT uiMsg, POINT pt, HWND hwnd);
+	BOOL ProcessMouseWheel(WPARAM wParam, LPARAM lParam);
 };
 

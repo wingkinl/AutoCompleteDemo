@@ -336,6 +336,8 @@ protected:
 	afx_msg void OnMeasureItem(int nIDCtl, LPMEASUREITEMSTRUCT lpMeasureItemStruct);
 	afx_msg void OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStruct);
 
+	afx_msg BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint pt);
+
 	LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 protected:
 	DECLARE_MESSAGE_MAP()

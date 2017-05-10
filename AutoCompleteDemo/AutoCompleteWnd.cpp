@@ -621,6 +621,7 @@ BEGIN_MESSAGE_MAP(CAutoCompleteWnd, CAutoCompleteWndBase)
 	ON_WM_TIMER()
 	ON_WM_MEASUREITEM()
 	ON_WM_DRAWITEM()
+	ON_WM_MOUSEWHEEL()
 END_MESSAGE_MAP()
 
 // CAutoCompleteWnd message handlers
@@ -952,6 +953,19 @@ void CAutoCompleteWnd::OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStruct)
 		return;
 	}
 	DrawItem(lpDrawItemStruct);
+}
+
+BOOL CAutoCompleteWnd::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
+{
+	if (GetKeyState(VK_CONTROL) < 0 || 
+		GetKeyState(VK_SHIFT) < 0 ||
+		GetKeyState(VK_MENU) < 0
+		)
+	{
+		Close();
+		return TRUE;
+	}
+	return FALSE;
 }
 
 void CAutoCompleteWnd::DrawItem(LPDRAWITEMSTRUCT pDIS)

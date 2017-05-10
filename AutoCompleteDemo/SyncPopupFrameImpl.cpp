@@ -64,6 +64,13 @@ BOOL CSyncPopupFrameImpl::PreTranslateMessage(MSG* pMsg)
 			return TRUE;
 		}
 		break;
+
+	case WM_MOUSEWHEEL:
+		if (ProcessMouseWheel(pMsg->wParam, pMsg->lParam))
+		{
+			return TRUE;
+		}
+		break;
 	}
 	return FALSE;
 }
@@ -91,5 +98,13 @@ BOOL CSyncPopupFrameImpl::ProcessMouseClick(UINT uiMsg, POINT pt, HWND hwnd)
 			pActivePopupWnd->Close();
 		}
 	}
+	return FALSE;
+}
+
+BOOL CSyncPopupFrameImpl::ProcessMouseWheel(WPARAM wParam, LPARAM lParam)
+{
+	CSyncPopupWnd* pActivePopupWnd = CSyncPopupWnd::GetSafeActivePopup();
+	if (pActivePopupWnd != NULL)
+		return(BOOL)pActivePopupWnd->SendMessage(WM_MOUSEWHEEL, wParam, lParam);
 	return FALSE;
 }
