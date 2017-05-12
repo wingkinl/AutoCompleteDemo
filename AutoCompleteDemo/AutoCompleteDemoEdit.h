@@ -17,6 +17,8 @@ public:
 	LPCTSTR GetItemDisplayText(int nItem) const override;
 
 	int UpdateFilteredList(LPCTSTR pszFilterText) override;
+
+	BOOL HandleSelChange(AUTOCSELCHANGEINFO* pSelChangeInfo) override;
 };
 
 template <typename ACImpBaseT>
@@ -25,6 +27,7 @@ BOOL CDemoACImp<ACImpBaseT>::GetInitInfo(AUTOCINITINFO* pInfo)
 	if (!ACImpBaseT::GetInitInfo(pInfo))
 		return FALSE;
 	pInfo->pImageList = &theApp.m_imgList;
+	pInfo->stToolTipInfo.m_bEnable = TRUE;
 	return TRUE;
 }
 
@@ -73,6 +76,14 @@ int CDemoACImp<ACImpBaseT>::UpdateFilteredList(LPCTSTR pszFilterText)
 	if ((int)_tcslen(pszFilterText) > theApp.m_nMaxTextLen)
 		return 0;
 	return ACImpBaseT::UpdateFilteredList(pszFilterText);
+}
+
+template <typename ACImpBaseT>
+BOOL CDemoACImp<ACImpBaseT>::HandleSelChange(AUTOCSELCHANGEINFO* pSelChangeInfo)
+{
+	pSelChangeInfo->strToolTipLabel = GetItemDisplayText(GetMappedIndex(pSelChangeInfo->nItem));
+	pSelChangeInfo->strToolTipDescription = _T("Hello");
+	return TRUE;
 }
 
 typedef CDemoACImp<CEditACImp>		CDemoEditACImp;

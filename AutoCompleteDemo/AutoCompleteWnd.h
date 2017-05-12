@@ -26,7 +26,29 @@ struct AUTOCNMHDR
 	LPARAM	lp;
 };
 
+class CAutoCTooltipCtrl;
+
 typedef int		EditPosLen;
+
+struct AUTOCTOOLTIPINFO
+{
+	BOOL	m_bEnable;
+	int		m_nAutoPopTime;	// negative value means don't modify it
+	int		m_nInitialTime;
+	int		m_nReshowTime;
+
+	BOOL m_bDrawIcon;
+	BOOL m_bDrawDescription;
+	BOOL m_bBoldLabel;
+	BOOL m_bDrawSeparator;
+	BOOL m_bVislManagerTheme;
+	int  m_nMaxDescrWidth;
+	int  m_nGradientAngle;	// 0 - 360, -1 -default (vertical)
+	COLORREF m_clrFill;
+	COLORREF m_clrFillGradient;
+	COLORREF m_clrText;
+	COLORREF m_clrBorder;
+};
 
 struct AUTOCINITINFO 
 {
@@ -43,6 +65,7 @@ struct AUTOCINITINFO
 	BOOL		bDropRestOfWord;
 	HFONT		hFont;			// the font for drawing list items
 	CImageList*	pImageList;		// the image list for displaying icon
+	AUTOCTOOLTIPINFO stToolTipInfo;
 };
 
 struct AUTOCITEM
@@ -84,6 +107,9 @@ struct AUTOCSELCHANGEINFO
 	AUTOCNMHDR	hdr;
 	int			nItem;
 	RECT		rcItemScreen;
+	// these are applicable only when tooltip was enabled
+	CString		strToolTipLabel;
+	CString		strToolTipDescription;
 };
 
 struct AUTOCCOMPLETE 
@@ -111,6 +137,8 @@ public:
 	virtual BOOL GetRangeText(CString& strText, EditPosLen nStart, EditPosLen nEnd) const = 0;
 	virtual EditPosLen GetCaretPos() const = 0;
 
+	virtual BOOL HandleSelChange(AUTOCSELCHANGEINFO* pSelChangeInfo) {return FALSE;}
+
 	virtual LRESULT OnACNotify(WPARAM wp, LPARAM lp);
 
 	virtual int GetTotalItemCount() const = 0;
@@ -119,6 +147,8 @@ public:
 	virtual int GetItemIconIndex(int nItem) const;
 
 	virtual BOOL GetDisplayInfo(AUTOCNMHDR* nmhdr) const;
+
+	virtual int GetMappedIndex(int nItem) const;
 
 	virtual int UpdateFilteredList(LPCTSTR pszFilterText);
 
@@ -307,6 +337,10 @@ protected:
 	void DrawItemText(CDC* pDC, int nRow, UINT nState, CRect& rect, BOOL bCalcOnly = FALSE);
 
 	BOOL HandleKeyUpdateTransparency();
+	void UpdateTransparency();
+
+	void KillToolTipTimer();
+	void ShowToolTip();
 protected:
 	CAutoCompleteWnd();
 	virtual ~CAutoCompleteWnd();
@@ -320,10 +354,13 @@ protected:
 
 	BYTE						m_nAlpha;
 	bool						m_bIncreaseAlpha;
-	UINT_PTR					m_nAlphaTiimer;
+	UINT_PTR					m_nAlphaTimer;
 
 	CFont*						m_pFont;
 	int							m_nItemHeight;
+
+	CAutoCTooltipCtrl*			m_pToolTipCtrl;
+	UINT_PTR					m_nToolTipTimer;
 protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
@@ -337,6 +374,8 @@ protected:
 	afx_msg void OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStruct);
 
 	afx_msg BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint pt);
+	
+	afx_msg void OnDestroy();
 
 	LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 protected:
