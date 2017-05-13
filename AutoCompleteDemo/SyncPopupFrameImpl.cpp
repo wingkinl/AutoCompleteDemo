@@ -93,10 +93,7 @@ BOOL CSyncPopupFrameImpl::ProcessMouseClick(UINT uiMsg, POINT pt, HWND hwnd)
 	CSyncPopupWnd* pActivePopupWnd = CSyncPopupWnd::GetSafeActivePopup();
 	if (pActivePopupWnd != NULL)
 	{
-		if ( !pActivePopupWnd->HitTest(pt) )
-		{
-			pActivePopupWnd->Close();
-		}
+		return pActivePopupWnd->ProcessMouseClick(uiMsg, pt, hwnd);
 	}
 	return FALSE;
 }

@@ -70,6 +70,15 @@ BOOL CSyncPopupWnd::HitTest(const POINT& ptScreen) const
 	return TRUE;
 }
 
+BOOL CSyncPopupWnd::ProcessMouseClick(UINT uiMsg, POINT pt, HWND hwnd)
+{
+	if (!HitTest(pt))
+	{
+		Close();
+	}
+	return FALSE;
+}
+
 void CSyncPopupWnd::Close()
 {
 	SendMessage(WM_CLOSE);

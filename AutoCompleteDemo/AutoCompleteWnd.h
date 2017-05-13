@@ -33,9 +33,7 @@ typedef int		EditPosLen;
 struct AUTOCTOOLTIPINFO
 {
 	BOOL	m_bEnable;
-	int		m_nAutoPopTime;	// negative value means don't modify it
-	int		m_nInitialTime;
-	int		m_nReshowTime;
+	int		m_nInitialTime;	// negative value means don't modify it
 
 	BOOL m_bDrawIcon;
 	BOOL m_bDrawDescription;
@@ -118,7 +116,6 @@ struct AUTOCCOMPLETE
 	EditPosLen	nPosStartChar;
 	BOOL		bDropRestOfWord;
 	int			nItem;
-	RECT		rcItemScreen;
 	CString		strText;
 };
 
@@ -302,6 +299,8 @@ public:
 	int GetVisibleItems() const;
 	int GetTopIndex() const;
 
+	BOOL GetItemRect(int nItem, LPRECT rect);
+
 	int MoveSelection(int nDelta);
 
 	void DoAutoCompletion();
@@ -332,6 +331,8 @@ protected:
 
 	int GetItemHeight();
 
+	BOOL ProcessMouseClick(UINT uiMsg, POINT pt, HWND hwnd) override;
+
 	void DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct);
 	void DrawItemIcon(CDC* pDC, int nRow, CRect rect);
 	void DrawItemText(CDC* pDC, int nRow, UINT nState, CRect& rect, BOOL bCalcOnly = FALSE);
@@ -340,6 +341,7 @@ protected:
 	void UpdateTransparency();
 
 	void KillToolTipTimer();
+	void StartToolTip(int nItem);
 	void ShowToolTip();
 protected:
 	CAutoCompleteWnd();
@@ -365,16 +367,17 @@ protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 
-	afx_msg void OnGetListDispInfo(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnListGetDispInfo(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnListItemChange(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnListDblClk(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnListEndScroll(NMHDR* pNMHDR, LRESULT* pResult);
 
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnMeasureItem(int nIDCtl, LPMEASUREITEMSTRUCT lpMeasureItemStruct);
 	afx_msg void OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStruct);
 
 	afx_msg BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint pt);
-	
+
 	afx_msg void OnDestroy();
 
 	LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam) override;

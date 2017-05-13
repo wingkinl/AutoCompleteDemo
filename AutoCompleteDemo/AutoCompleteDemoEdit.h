@@ -82,7 +82,8 @@ template <typename ACImpBaseT>
 BOOL CDemoACImp<ACImpBaseT>::HandleSelChange(AUTOCSELCHANGEINFO* pSelChangeInfo)
 {
 	pSelChangeInfo->strToolTipLabel = GetItemDisplayText(GetMappedIndex(pSelChangeInfo->nItem));
-	pSelChangeInfo->strToolTipDescription = _T("Hello");
+	CString strFilePath = theApp.m_strPath + _T("\\") + pSelChangeInfo->strToolTipLabel;
+	pSelChangeInfo->strToolTipDescription = strFilePath;
 	return TRUE;
 }
 

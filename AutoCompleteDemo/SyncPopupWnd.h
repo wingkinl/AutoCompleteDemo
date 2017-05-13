@@ -16,6 +16,7 @@ public:
 	virtual BOOL Create(CWnd* pOwner, POINT pos);
 
 	BOOL HitTest(const POINT& ptScreen) const;
+	virtual BOOL ProcessMouseClick(UINT uiMsg, POINT pt, HWND hwnd);
 
 	virtual void Close();
 public:
