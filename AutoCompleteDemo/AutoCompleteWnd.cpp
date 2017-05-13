@@ -755,7 +755,13 @@ BOOL CAutoCompleteWnd::Create(CWnd* pOwner, const AUTOCINITINFO& info)
 	{
 		m_pToolTipCtrl = new CAutoCTooltipCtrl;
 		VERIFY(m_pToolTipCtrl->Create(this, TTS_ALWAYSTIP|TTS_NOPREFIX, info.stToolTipInfo));
-		m_pToolTipCtrl->Activate(TRUE);
+		TOOLINFO tti = { 0 };
+		tti.cbSize = sizeof(TOOLINFO);
+		tti.uFlags = TTF_TRACK | TTF_ABSOLUTE | TTF_IDISHWND;
+		tti.lpszText = _T("dummy");
+		tti.hwnd = m_hWnd;
+		tti.uId = (UINT_PTR)m_hWnd;
+		m_pToolTipCtrl->SendMessage(TTM_ADDTOOL, 0, (LPARAM)&tti);
 	}
 
 	UpdateListItemCount(info.nItemCount);
@@ -1010,7 +1016,7 @@ void CAutoCompleteWnd::OnListItemChange(NMHDR* pNMHDR, LRESULT* pResult)
 			m_pToolTipCtrl->UpdateTipText((LPCTSTR)info.strToolTipLabel, this);
 			m_pToolTipCtrl->SetDescription(info.strToolTipDescription);
 			UINT nElapse = (UINT)m_pToolTipCtrl->GetDelayTime(TTDT_INITIAL);
-			SetTimer(AC_TIMER_TOOLTIP_ID, nElapse, nullptr);
+			m_nToolTipTimer = SetTimer(AC_TIMER_TOOLTIP_ID, nElapse, nullptr);
 		}
 	}
 }
@@ -1057,7 +1063,17 @@ void CAutoCompleteWnd::ShowToolTip()
 		ASSERT(0);
 		return;
 	}
-	m_pToolTipCtrl->Popup();
+	//m_pToolTipCtrl->Popup();
+	TOOLINFO tti = { 0 };
+	tti.cbSize = sizeof(TOOLINFO);
+	tti.uFlags = TTF_TRACK | TTF_ABSOLUTE | TTF_IDISHWND;
+	tti.lpszText = _T("dummy");
+	tti.hwnd = m_hWnd;
+	tti.uId = (UINT_PTR)m_hWnd;
+	CPoint pt;
+	GetCursorPos(&pt);
+	m_pToolTipCtrl->SendMessage(TTM_TRACKPOSITION, 0, MAKELPARAM(pt.x, pt.y));
+	m_pToolTipCtrl->SendMessage(TTM_TRACKACTIVATE, TRUE, (LPARAM)&tti);
 	KillToolTipTimer();
 }
 
