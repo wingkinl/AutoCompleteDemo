@@ -22,6 +22,8 @@ CAutoCompleteListCtrl::~CAutoCompleteListCtrl()
 int CAutoCompleteListCtrl::MoveSelection(int nDelta)
 {
 	int nCurSel = GetCurSel();
+	if (nCurSel < 0)
+		nCurSel = 0;
 	nCurSel += nDelta;
 	if (nCurSel < 0 )
 		nCurSel = 0;

@@ -147,7 +147,7 @@ public:
 
 	virtual int GetMappedIndex(int nItem) const;
 
-	virtual int UpdateFilteredList(LPCTSTR pszFilterText);
+	virtual int UpdateFilteredList(LPCTSTR pszFilterText, int& nPreSelIndex);
 
 	virtual EditPosLen PositionBefore(EditPosLen nPos) const;
 	virtual EditPosLen PositionAfter(EditPosLen nPos) const;
@@ -299,6 +299,9 @@ public:
 	int GetVisibleItems() const;
 	int GetTopIndex() const;
 
+	int GetCurSel() const;
+	void SetCurSel(int nItem);
+
 	BOOL GetItemRect(int nItem, LPRECT rect);
 
 	int MoveSelection(int nDelta);
@@ -341,7 +344,7 @@ protected:
 	void UpdateTransparency();
 
 	void KillToolTipTimer();
-	void StartToolTip(int nItem);
+	void NotifySelChange(int nItem);
 	void ShowToolTip();
 protected:
 	CAutoCompleteWnd();
@@ -363,6 +366,7 @@ protected:
 
 	CAutoCTooltipCtrl*			m_pToolTipCtrl;
 	UINT_PTR					m_nToolTipTimer;
+	bool						m_bUpdateToolTipOnScroll;
 protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnSize(UINT nType, int cx, int cy);

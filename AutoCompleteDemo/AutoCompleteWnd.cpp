@@ -151,7 +151,7 @@ BOOL CWindowACImp::HandleKey(AUTOCKEYINFO* pInfo)
 	}
 	if (bIsValid)
 	{
-		pInfo->nItemCount = bUpdateList ? UpdateFilteredList((LPCTSTR)strText) : -1;
+		pInfo->nItemCount = bUpdateList ? UpdateFilteredList((LPCTSTR)strText, pInfo->nPreSelectItem) : -1;
 		pInfo->bClose = FALSE;
 	}
 	if (!bIsValid)
@@ -176,7 +176,7 @@ LRESULT CWindowACImp::OnACNotify(WPARAM wp, LPARAM lp)
 			BOOL bRet = GetInitInfo(pInfo);
 			if (bRet)
 			{
-				pInfo->nItemCount = UpdateFilteredList((LPCTSTR)pInfo->strStart);
+				pInfo->nItemCount = UpdateFilteredList((LPCTSTR)pInfo->strStart, pInfo->nPreSelectItem);
 			}
 			return bRet;
 		}
@@ -230,43 +230,44 @@ int CWindowACImp::GetMappedIndex(int nItem) const
 	return nMappedItem;
 }
 
-int CWindowACImp::UpdateFilteredList(LPCTSTR pszFilterText)
+int CWindowACImp::UpdateFilteredList(LPCTSTR pszFilterText, int& nPreSelIndex)
 {
+	//int nOldMappedItem = GetMappedIndex(nPreSelIndex);
 	m_arrFilteredIndices.RemoveAll();
 	int nItemCount = GetTotalItemCount();
-	if (pszFilterText && *pszFilterText)
+	if (!pszFilterText || !*pszFilterText)
+		return 0;
+	int nTextLen = (int)_tcslen(pszFilterText);
+	for (int ii = 0; ii < nItemCount; ++ii)
 	{
-		int nTextLen = (int)_tcslen(pszFilterText);
-		for (int ii = 0; ii < nItemCount; ++ii)
+		LPCTSTR pszItemText = GetItemDisplayText(ii);
+		bool bMatch = false;
+		if (m_bFuzzyMatch)
 		{
-			LPCTSTR pszItemText = GetItemDisplayText(ii);
-			bool bMatch = false;
-			if (m_bFuzzyMatch)
+			LPCTSTR pszTextMatch = pszItemText;
+			auto pfnStrChr = m_bMatchCase ? StrChr : StrChrI;
+			for (int nChar = 0; nChar < nTextLen; ++nChar)
 			{
-				auto pfnStrChr = m_bMatchCase ? StrChr : StrChrI;
-				for (int nChar = 0; nChar < nTextLen; ++nChar)
+				pszTextMatch = pfnStrChr(pszTextMatch, pszFilterText[nChar]);
+				if (!pszTextMatch)
+					break;
+				if (*++pszTextMatch == _T('\0'))
 				{
-					pszItemText = pfnStrChr(pszItemText, pszFilterText[nChar]);
-					if (!pszItemText)
-						break;
-					if (*++pszItemText == _T('\0'))
-					{
-						if (nChar != nTextLen - 1)
-							pszItemText = nullptr;
-						break;
-					}
+					if (nChar != nTextLen - 1)
+						pszTextMatch = nullptr;
+					break;
 				}
-				bMatch = pszItemText != nullptr;
 			}
-			else
-			{
-				auto pfnCmp = m_bMatchCase ? _tcsnccmp : _tcsncicmp;
-				bMatch = pfnCmp(pszItemText, pszFilterText, nTextLen) == 0;
-			}
-			if (bMatch)
-			{
-				m_arrFilteredIndices.Add(ii);
-			}
+			bMatch = pszTextMatch != nullptr;
+		}
+		else
+		{
+			auto pfnCmp = m_bMatchCase ? _tcsnccmp : _tcsncicmp;
+			bMatch = pfnCmp(pszItemText, pszFilterText, nTextLen) == 0;
+		}
+		if (bMatch)
+		{
+			m_arrFilteredIndices.Add(ii);
 		}
 	}
 	return (int)m_arrFilteredIndices.GetSize();
@@ -892,6 +893,7 @@ CAutoCompleteWnd::CAutoCompleteWnd()
 
 	m_pToolTipCtrl = nullptr;
 	m_nToolTipTimer = 0;
+	m_bUpdateToolTipOnScroll = true;
 }
 
 CAutoCompleteWnd::~CAutoCompleteWnd()
@@ -931,12 +933,19 @@ BOOL CAutoCompleteWnd::Create(CWnd* pOwner, const AUTOCINITINFO& info)
 	if (info.stToolTipInfo.m_bEnable)
 	{
 		m_pToolTipCtrl = new CAutoCTooltipCtrl;
-		VERIFY(m_pToolTipCtrl->Create(this, TTS_ALWAYSTIP|TTS_NOPREFIX, info.stToolTipInfo));
+		VERIFY(m_pToolTipCtrl->Create(this, TTS_ALWAYSTIP | TTS_NOPREFIX, info.stToolTipInfo));
 	}
 
 	UpdateListItemCount(info.nItemCount);
-	m_listCtrl->SetCurSel(info.nPreSelectItem < info.nItemCount ?  info.nPreSelectItem : 0);
+	int nNewSel = info.nPreSelectItem < info.nItemCount ? info.nPreSelectItem : 0;
+	//m_listCtrl->SetCurSel(nNewSel);
+	//m_listCtrl->EnsureVisible(nNewSel, FALSE);
+	// prevent the tooltip from immediately showing
+	m_bUpdateToolTipOnScroll = false;
+	MoveSelection(nNewSel);
+	m_bUpdateToolTipOnScroll = true;
 	ModifyStyleEx(0, WS_EX_LAYERED);
+
 	return bCreated;
 }
 
@@ -973,6 +982,18 @@ int CAutoCompleteWnd::GetTopIndex() const
 	return nTopIndex;
 }
 
+int CAutoCompleteWnd::GetCurSel() const
+{
+	int nCurSel = m_listCtrl ? m_listCtrl->GetCurSel() : 0;
+	return nCurSel < 0 ? 0 : nCurSel;
+}
+
+void CAutoCompleteWnd::SetCurSel(int nItem)
+{
+	if (m_listCtrl)
+		m_listCtrl->SetCurSel(nItem);
+}
+
 BOOL CAutoCompleteWnd::GetItemRect(int nItem, LPRECT rect)
 {
 	if (!m_listCtrl)
@@ -990,7 +1011,7 @@ int CAutoCompleteWnd::MoveSelection(int nDelta)
 	if (!m_listCtrl)
 		return -1;
 	int nTopItemIndex = GetTopIndex();
-	int nOldSelItem = m_listCtrl->GetCurSel();
+	int nOldSelItem = GetCurSel();
 	int nCurSelItem = m_listCtrl->MoveSelection(nDelta);
 	if (nCurSelItem < nTopItemIndex || nCurSelItem >= nTopItemIndex + GetVisibleItems())
 	{
@@ -1010,7 +1031,7 @@ void CAutoCompleteWnd::DoAutoCompletion()
 	PrepareNotifyHeader((AUTOCNMHDR*)&info);
 	info.nPosStartChar = m_infoInit.nPosStartChar;
 	info.bDropRestOfWord = m_infoInit.bDropRestOfWord;
-	info.nItem = m_listCtrl->GetCurSel();
+	info.nItem = GetCurSel();
 	info.strText = m_listCtrl->GetItemText(info.nItem, 0);
 	NotifyOwner(ACCmdComplete, (AUTOCNMHDR*)&info);
 	Close();
@@ -1185,7 +1206,7 @@ void CAutoCompleteWnd::OnListItemChange(NMHDR* pNMHDR, LRESULT* pResult)
 	NM_LISTVIEW* pNMLV = (NM_LISTVIEW*)pNMHDR;
 	if ( (pNMLV->uChanged & LVIF_STATE) && (pNMLV->uNewState & LVIS_SELECTED) )
 	{
-		StartToolTip(pNMLV->iItem);
+		NotifySelChange(pNMLV->iItem);
 	}
 }
 
@@ -1200,7 +1221,7 @@ void CAutoCompleteWnd::OnListDblClk(NMHDR* pNMHDR, LRESULT* pResult)
 
 void CAutoCompleteWnd::OnListEndScroll(NMHDR* pNMHDR, LRESULT* pResult)
 {
-	if (m_pToolTipCtrl->GetSafeHwnd())
+	if (m_bUpdateToolTipOnScroll && m_pToolTipCtrl->GetSafeHwnd())
 	{
 		m_pToolTipCtrl->Show();
 	}
@@ -1236,7 +1257,7 @@ void CAutoCompleteWnd::KillToolTipTimer()
 	}
 }
 
-void CAutoCompleteWnd::StartToolTip(int nItem)
+void CAutoCompleteWnd::NotifySelChange(int nItem)
 {
 	AUTOCSELCHANGEINFO info = { 0 };
 	PrepareNotifyHeader((AUTOCNMHDR*)&info);
@@ -1502,7 +1523,7 @@ BOOL CAutoCompleteWnd::NotifyKey(UINT nKey)
 	info.nPosStartChar = m_infoInit.nPosStartChar;
 	info.nStartLine = m_infoInit.nStartLine;
 	info.nItemCount = -1;
-	info.nPreSelectItem = m_listCtrl->GetCurSel();
+	info.nPreSelectItem = GetCurSel();
 	info.bEatKey = FALSE;
 	info.bClose = TRUE;
 	NotifyOwner(ACCmdKey, (AUTOCNMHDR*)&info);
@@ -1512,13 +1533,20 @@ BOOL CAutoCompleteWnd::NotifyKey(UINT nKey)
 	}
 	else if (info.nItemCount > 0)
 	{
-		auto nOldSel = m_listCtrl->GetCurSel();
+		auto nOldSel = GetCurSel();
 		UpdateListItemCount(info.nItemCount);
 		auto nNewSel = info.nPreSelectItem < info.nItemCount ? info.nPreSelectItem : GetTopIndex();
-		m_listCtrl->SetCurSel(nNewSel);
+		SetCurSel(nNewSel);
+		m_listCtrl->EnsureVisible(nNewSel, FALSE);
+
 		if (nOldSel == nNewSel && m_pToolTipCtrl->GetSafeHwnd())
 		{
-			StartToolTip(nNewSel);
+			// although the indices are the same but they could be different item!
+			NotifySelChange(nNewSel);
+		}
+		if (m_pToolTipCtrl)
+		{
+			m_pToolTipCtrl->Show(FALSE);
 		}
 	}
 	return info.bEatKey;

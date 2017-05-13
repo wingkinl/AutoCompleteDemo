@@ -16,7 +16,7 @@ public:
 
 	LPCTSTR GetItemDisplayText(int nItem) const override;
 
-	int UpdateFilteredList(LPCTSTR pszFilterText) override;
+	int UpdateFilteredList(LPCTSTR pszFilterText, int& nPreSelIndex) override;
 
 	BOOL HandleSelChange(AUTOCSELCHANGEINFO* pSelChangeInfo) override;
 };
@@ -69,13 +69,13 @@ LPCTSTR CDemoACImp<ACImpBaseT>::GetItemDisplayText(int nItem) const
 }
 
 template <typename ACImpBaseT>
-int CDemoACImp<ACImpBaseT>::UpdateFilteredList(LPCTSTR pszFilterText)
+int CDemoACImp<ACImpBaseT>::UpdateFilteredList(LPCTSTR pszFilterText, int& nPreSelIndex)
 {
 	m_bFuzzyMatch = theApp.m_bFuzzyMatch;
 	m_bMatchCase = theApp.m_bMatchCase;
 	if ((int)_tcslen(pszFilterText) > theApp.m_nMaxTextLen)
 		return 0;
-	return ACImpBaseT::UpdateFilteredList(pszFilterText);
+	return ACImpBaseT::UpdateFilteredList(pszFilterText, nPreSelIndex);
 }
 
 template <typename ACImpBaseT>
