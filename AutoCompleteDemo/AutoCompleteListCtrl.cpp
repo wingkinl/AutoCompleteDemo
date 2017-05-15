@@ -2,7 +2,6 @@
 //
 
 #include "stdafx.h"
-#include "AutoCompleteDemo.h"
 #include "AutoCompleteListCtrl.h"
 
 

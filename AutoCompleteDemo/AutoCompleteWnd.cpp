@@ -62,7 +62,7 @@ CWindowACImp::~CWindowACImp()
 
 BOOL CWindowACImp::IsValidChar(UINT nChar) const
 {
-	return 0 < nChar && nChar <= 0xFF && _istalnum(nChar);
+	return 0 < nChar && nChar <= 0xFF && _istalnum((TCHAR)nChar);
 }
 
 BOOL CWindowACImp::HandleKey(AUTOCKEYINFO* pInfo)
@@ -147,7 +147,7 @@ BOOL CWindowACImp::HandleKey(AUTOCKEYINFO* pInfo)
 		if (pInfo->nKey == VK_BACK)
 			strText.Delete(strText.GetLength()-1);
 		else if (bAppendChar)
-			strText.AppendChar(pInfo->nChar);
+			strText.AppendChar((TCHAR)pInfo->nChar);
 	}
 	if (bIsValid)
 	{
@@ -836,7 +836,9 @@ void CAutoCTooltipCtrl::OnShow(NMHDR* /*pNMHDR*/, LRESULT* pResult)
 
 	SetWindowPos(NULL, pt.x, pt.y, cx, cy, SWP_NOZORDER | SWP_NOACTIVATE);
 
+#if _MSC_VER >= 1900
 	m_sizeCornerRadius = GetWindowTheme(GetSafeHwnd()) != NULL ? CSize(3, 3) : CSize(0, 0);
+#endif _MSC_VER
 	SetWindowPos(&wndTop, -1, -1, -1, -1, SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOSIZE | SWP_DRAWFRAME);
 }
 
