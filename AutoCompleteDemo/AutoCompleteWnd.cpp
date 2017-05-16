@@ -192,6 +192,8 @@ LRESULT CWindowACImp::OnACNotify(WPARAM wp, LPARAM lp)
 		return (LRESULT)AutoComplete((AUTOCCOMPLETE*)nmhdr);
 	case ACCmdSelChange:
 		return (LRESULT)HandleSelChange((AUTOCSELCHANGEINFO*)nmhdr);
+	case ACCmdDrawIcon:
+		return (LRESULT)DrawIcon((AUTOCDRAWICON*)nmhdr);
 	}
 	return 0;
 }
@@ -638,6 +640,9 @@ public:
 
 	void Show(BOOL bShow = TRUE);
 protected:
+	BOOL OnDrawIcon(CDC* pDC, CRect rectImage) override;
+	CSize GetIconSize() override;
+protected:
 	void FillInToolInfo(TOOLINFO& ti);
 	CPoint CalcTrackPosition(int cx, int cy);
 protected:
@@ -842,6 +847,24 @@ void CAutoCTooltipCtrl::OnShow(NMHDR* /*pNMHDR*/, LRESULT* pResult)
 	SetWindowPos(&wndTop, -1, -1, -1, -1, SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOSIZE | SWP_DRAWFRAME);
 }
 
+BOOL CAutoCTooltipCtrl::OnDrawIcon(CDC* pDC, CRect rectImage)
+{
+	CWnd* pWndOwner = GetOwner();
+	CAutoCompleteWnd* pACWnd = (CAutoCompleteWnd*)pWndOwner;
+	if (pACWnd)
+		return pACWnd->DrawItemIcon(pDC, m_nItem, rectImage);
+	return CMFCToolTipCtrl::OnDrawIcon(pDC, rectImage);
+}
+
+CSize CAutoCTooltipCtrl::GetIconSize()
+{
+	CWnd* pWndOwner = GetOwner();
+	CAutoCompleteWnd* pACWnd = (CAutoCompleteWnd*)pWndOwner;
+	if (pACWnd)
+		return pACWnd->GetIconSize();
+	return CMFCToolTipCtrl::GetIconSize();
+}
+
 void CAutoCTooltipCtrl::FillInToolInfo(TOOLINFO& ti)
 {
 	CWnd* pWndOwner = GetOwner();
@@ -896,6 +919,8 @@ CAutoCompleteWnd::CAutoCompleteWnd()
 	m_pToolTipCtrl = nullptr;
 	m_nToolTipTimer = 0;
 	m_bUpdateToolTipOnScroll = true;
+
+	m_szIcon = CSize(0, 0);
 }
 
 CAutoCompleteWnd::~CAutoCompleteWnd()
@@ -931,6 +956,8 @@ BOOL CAutoCompleteWnd::Create(CWnd* pOwner, const AUTOCINITINFO& info)
 	SetOwner(pOwner);
 	if (info.pImageList)
 		SetImageList(info.pImageList);
+	else if (info.szIcons.cx && info.szIcons.cy)
+		m_szIcon = info.szIcons;
 
 	if (info.stToolTipInfo.m_bEnable)
 	{
@@ -1389,13 +1416,20 @@ void CAutoCompleteWnd::DrawItem(LPDRAWITEMSTRUCT pDIS)
 	// Background
 	pDC->FillSolidRect(rect, clrBk);
 
-	DrawItemIcon(pDC, nRow, rect);
+	if (m_szIcon.cx)
+	{
+		CRect rectIcon = rect;
+		rectIcon.left += g_szIconPadding.cx;
+		rectIcon.right = rectIcon.left + m_szIcon.cx;
+		DrawItemIcon(pDC, nRow, rectIcon);
+	}
 
 	DrawItemText(pDC, nRow, nItemState, rect);
 }
 
-void CAutoCompleteWnd::DrawItemIcon(CDC* pDC, int nRow, CRect rect)
+BOOL CAutoCompleteWnd::DrawItemIcon(CDC* pDC, int nRow, CRect rect)
 {
+	BOOL bRet = FALSE;
 	auto pImageList = m_listCtrl->GetImageList(LVSIL_SMALL);
 	if (pImageList)
 	{
@@ -1404,22 +1438,38 @@ void CAutoCompleteWnd::DrawItemIcon(CDC* pDC, int nRow, CRect rect)
 		item.mask = LVIF_IMAGE;
 		VERIFY(m_listCtrl->GetItem(&item));
 		int nIcon = item.iImage;
-		rect.left += g_szIconPadding.cx;
-		CPoint pt = rect.TopLeft();
-		pt.y += (rect.Height() - m_szIcon.cy) / 2;
+ 		CPoint pt = rect.TopLeft();
+ 		pt.y += (rect.Height() - m_szIcon.cy) / 2;
 		UINT nIconStyle = ILD_TRANSPARENT;
-		pImageList->Draw(pDC, nIcon, pt, nIconStyle);
+		bRet = pImageList->Draw(pDC, nIcon, pt, nIconStyle);
 	}
+	else
+	{
+		AUTOCDRAWICON info;
+		PrepareNotifyHeader((AUTOCNMHDR*)&info);
+		info.hDC = pDC->GetSafeHdc();
+		info.nItem = nRow;
+		info.rect = rect;
+		info.hIcon = nullptr;
+		info.bAutoDestroyIcon = TRUE;
+		bRet = NotifyOwner(ACCmdDrawIcon, (AUTOCNMHDR*)&info) != 0;
+		if (bRet && info.hIcon)
+		{
+			CPoint pt = rect.TopLeft();
+			pt.y += (rect.Height() - m_szIcon.cy) / 2;
+			pDC->DrawIcon(pt, info.hIcon);
+			if (info.hIcon)
+				DestroyIcon(info.hIcon);
+		}
+	}
+	return bRet;
 }
 
 void CAutoCompleteWnd::DrawItemText(CDC* pDC, int nRow, UINT nState, CRect& rect, BOOL bCalcOnly)
 {
 	CString str = m_listCtrl->GetItemText(nRow, 0);
-	auto pImageList = m_listCtrl->GetImageList(LVSIL_SMALL);
-	if (pImageList)
-	{
+	if (m_szIcon.cx)
 		rect.left += g_szIconPadding.cx + m_szIcon.cx;
-	}
 	rect.left += g_szTextPadding.cx;
 	if (bCalcOnly)
 	{
@@ -1557,6 +1607,11 @@ BOOL CAutoCompleteWnd::NotifyKey(UINT nKey)
 void CAutoCompleteWnd::Close()
 {
 	CAutoCompleteWndBase::Close();
+}
+
+CSize CAutoCompleteWnd::GetIconSize() const
+{
+	return m_szIcon;
 }
 
 void CAutoCompleteWnd::UpdateListItemCount(int nItemCount)

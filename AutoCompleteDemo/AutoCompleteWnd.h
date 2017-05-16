@@ -13,6 +13,7 @@ enum ACCmd
 	ACCmdSelChange,
 	ACCmdKey,
 	ACCmdComplete,
+	ACCmdDrawIcon,
 
 	ACCmdCustom			= 1024,
 };
@@ -51,7 +52,7 @@ struct AUTOCTOOLTIPINFO
 struct AUTOCINITINFO 
 {
 	AUTOCNMHDR	hdr;
-	CPoint		posWordScreen;	// bottom-left corner of the first character
+	POINT		posWordScreen;	// bottom-left corner of the first character
 	long		nLineHeight;	// the height of the current line
 	int			nItemCount;		// the number of items in the list
 	int			nPreSelectItem;	// the item to be selected when display
@@ -63,7 +64,20 @@ struct AUTOCINITINFO
 	BOOL		bDropRestOfWord;
 	HFONT		hFont;			// the font for drawing list items
 	CImageList*	pImageList;		// the image list for displaying icon
+	SIZE		szIcons;		// used only when non-zero values returned AND pImageList is NULL
 	AUTOCTOOLTIPINFO stToolTipInfo;
+};
+
+struct AUTOCDRAWICON 
+{
+	AUTOCNMHDR	hdr;
+	HDC			hDC;
+	int			nItem;
+	RECT		rect;
+	// the owner can finish drawing itself or return the icon for the
+	// window to draw it
+	HICON		hIcon;
+	BOOL		bAutoDestroyIcon;
 };
 
 struct AUTOCITEM
@@ -135,6 +149,8 @@ public:
 	virtual EditPosLen GetCaretPos() const = 0;
 
 	virtual BOOL HandleSelChange(AUTOCSELCHANGEINFO* pSelChangeInfo) {return FALSE;}
+
+	virtual BOOL DrawIcon(AUTOCDRAWICON* pDrawIcon)	{return FALSE;}
 
 	virtual LRESULT OnACNotify(WPARAM wp, LPARAM lp);
 
@@ -311,6 +327,8 @@ public:
 	void SetImageList(CImageList* pImageList);
 
 	void Close() override;
+
+	CSize GetIconSize() const;
 public:
 	static CAutoCompleteWnd*	GetActiveInstance();
 	static BOOL					Activate(CWnd* pOwner, UINT nChar);
@@ -337,7 +355,7 @@ protected:
 	BOOL ProcessMouseClick(UINT uiMsg, POINT pt, HWND hwnd) override;
 
 	void DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct);
-	void DrawItemIcon(CDC* pDC, int nRow, CRect rect);
+	BOOL DrawItemIcon(CDC* pDC, int nRow, CRect rect);
 	void DrawItemText(CDC* pDC, int nRow, UINT nState, CRect& rect, BOOL bCalcOnly = FALSE);
 
 	BOOL HandleKeyUpdateTransparency();
@@ -364,6 +382,7 @@ protected:
 	CFont*						m_pFont;
 	int							m_nItemHeight;
 
+	friend class CAutoCTooltipCtrl;
 	CAutoCTooltipCtrl*			m_pToolTipCtrl;
 	UINT_PTR					m_nToolTipTimer;
 	bool						m_bUpdateToolTipOnScroll;
