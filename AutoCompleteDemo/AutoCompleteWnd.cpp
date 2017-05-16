@@ -1596,14 +1596,13 @@ BOOL CAutoCompleteWnd::NotifyKey(UINT nKey)
 		SetCurSel(nNewSel);
 		m_listCtrl->EnsureVisible(nNewSel, FALSE);
 
+		if (m_pToolTipCtrl)
+			m_pToolTipCtrl->Show(FALSE);
+
 		if (nOldSel == nNewSel && m_pToolTipCtrl->GetSafeHwnd())
 		{
 			// although the indices are the same but they could be different item!
 			NotifySelChange(nNewSel);
-		}
-		if (m_pToolTipCtrl)
-		{
-			m_pToolTipCtrl->Show(FALSE);
 		}
 	}
 	return info.bEatKey;
