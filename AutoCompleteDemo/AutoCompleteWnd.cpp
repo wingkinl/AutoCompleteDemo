@@ -374,30 +374,32 @@ BOOL CEditACImp::GetInitInfo(AUTOCINITINFO* pInfo)
 
 BOOL CEditACImp::AutoComplete(AUTOCCOMPLETE* pInfo)
 {
-	int nEndChar = GetCaretPos();
+	int nEndCharPos = GetCaretPos();
 	if (pInfo->bDropRestOfWord)
 	{
-		int nCurLine = LineFromChar(nEndChar);
+		int nCurLine = LineFromChar(nEndCharPos);
 		int nCurLineStartChar = LineIndex(nCurLine);
+		auto nLineEndPos = GetLineEndPosition(nCurLine);
 
-		ASSERT(nEndChar >= nCurLineStartChar);
+		ASSERT(nEndCharPos >= nCurLineStartChar);
 
 		int nLineLen = LineLength(nCurLineStartChar);
 		CString strLine;
 		GetLineText(nCurLine, strLine, nLineLen);
 		LPCTSTR pszLine = (LPCTSTR)strLine;
 
-		int nCurCharOffset = nEndChar - nCurLineStartChar;
+		int nCurCharOffset = nEndCharPos - nCurLineStartChar;
+		nEndCharPos = nLineEndPos;
 		for (int nCharPos = nCurCharOffset; nCharPos < nLineLen; ++nCharPos)
 		{
 			if (!IsValidChar(pszLine[nCharPos]))
 			{
-				nEndChar = nCurLineStartChar + nCharPos;
+				nEndCharPos = nCurLineStartChar + nCharPos;
 				break;
 			}
 		}
 	}
-	SetSel(pInfo->nPosStartChar, nEndChar, TRUE);
+	SetSel(pInfo->nPosStartChar, nEndCharPos, TRUE);
 	CString strText = GetCompleteText(pInfo->strText, pInfo->nItem);
 	ReplaceSel(strText);
 	return TRUE;
@@ -532,6 +534,7 @@ BOOL CScintillaACImp::AutoComplete(AUTOCCOMPLETE* pInfo)
 		int nCurLine = m_pEdit->LineFromPosition(nEndCharPos);
 		auto nLineEndPos = m_pEdit->GetLineEndPosition(nCurLine);
 		auto nCharPos = nEndCharPos;
+		nEndCharPos = nLineEndPos;
 		auto nDocEnd = m_pEdit->GetLength();
 		while (nCharPos < nLineEndPos)
 		{
