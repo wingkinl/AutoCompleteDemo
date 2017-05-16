@@ -398,7 +398,8 @@ BOOL CEditACImp::AutoComplete(AUTOCCOMPLETE* pInfo)
 		}
 	}
 	SetSel(pInfo->nPosStartChar, nEndChar, TRUE);
-	ReplaceSel(pInfo->strText);
+	CString strText = GetCompleteText(pInfo->strText, pInfo->nItem);
+	ReplaceSel(strText);
 	return TRUE;
 }
 
@@ -544,7 +545,8 @@ BOOL CScintillaACImp::AutoComplete(AUTOCCOMPLETE* pInfo)
 		}
 	}
 	m_pEdit->SetSel(pInfo->nPosStartChar, nEndCharPos);
-	m_pEdit->ReplaceSel(pInfo->strText);
+	CString strText = GetCompleteText(pInfo->strText, pInfo->nItem);
+	m_pEdit->ReplaceSel(strText);
 	return TRUE;
 }
 

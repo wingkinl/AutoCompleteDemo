@@ -165,6 +165,8 @@ public:
 
 	virtual int UpdateFilteredList(LPCTSTR pszFilterText, int& nPreSelIndex);
 
+	virtual CString GetCompleteText(const CString& strText, int nItem) const {return strText;}
+
 	virtual EditPosLen PositionBefore(EditPosLen nPos) const;
 	virtual EditPosLen PositionAfter(EditPosLen nPos) const;
 	virtual int LineFromPosition(EditPosLen nPos) const = 0;
