@@ -61,6 +61,8 @@ struct AUTOCINITINFO
 	EditPosLen	nPosStartChar;	// the position of the first character in editor
 	EditPosLen	nStartStrLen;	// the pre-entered length of characters
 	CString		strStart;
+	BOOL		bDummySelect;	// hitting enter key won't complete on the selected item
+	BOOL		bCompleteDummySelOnTab;	// tab key should do completion even when dummy select 
 	BOOL		bDropRestOfWord;
 	HFONT		hFont;			// the font for drawing list items
 	CImageList*	pImageList;		// the image list for displaying icon
@@ -131,6 +133,12 @@ struct AUTOCCOMPLETE
 	BOOL		bDropRestOfWord;
 	int			nItem;
 	CString		strText;
+	enum Event {
+		EventEnter,
+		EventTab,
+		EventDblClk,
+	};
+	Event		eventFrom;
 };
 
 class ACWND_EXT_CLASS CWindowACImp
@@ -324,7 +332,7 @@ public:
 
 	int MoveSelection(int nDelta);
 
-	void DoAutoCompletion();
+	void DoAutoCompletion(int nEvent);
 
 	void SetImageList(CImageList* pImageList);
 

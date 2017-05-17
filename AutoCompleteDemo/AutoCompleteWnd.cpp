@@ -486,7 +486,7 @@ BOOL CScintillaACImp::GetInitInfo(AUTOCINITINFO* pInfo)
 		auto nChar = m_pEdit->GetCharAt(nCharPos);
 		if ( !IsValidChar((UINT)nChar) )
 			break;
-		pInfo->strStart.Insert(0, nChar);
+		pInfo->strStart.Insert(0, (TCHAR)nChar);
 		pInfo->nPosStartChar = nCharPos;
 		if (nCharPos <= 0)
 			break;
@@ -971,13 +971,17 @@ BOOL CAutoCompleteWnd::Create(CWnd* pOwner, const AUTOCINITINFO& info)
 	}
 
 	UpdateListItemCount(info.nItemCount);
-	int nNewSel = info.nPreSelectItem < info.nItemCount ? info.nPreSelectItem : 0;
-	//m_listCtrl->SetCurSel(nNewSel);
-	//m_listCtrl->EnsureVisible(nNewSel, FALSE);
-	// prevent the tooltip from immediately showing
-	m_bUpdateToolTipOnScroll = false;
-	MoveSelection(nNewSel);
-	m_bUpdateToolTipOnScroll = true;
+	if (!info.bDummySelect)
+	{
+		int nNewSel = info.nPreSelectItem < info.nItemCount ? info.nPreSelectItem : 0;
+		//m_listCtrl->SetCurSel(nNewSel);
+		//m_listCtrl->EnsureVisible(nNewSel, FALSE);
+		// prevent the tooltip from immediately showing
+		m_bUpdateToolTipOnScroll = false;
+		MoveSelection(nNewSel);
+		m_bUpdateToolTipOnScroll = true;
+	}
+
 	ModifyStyleEx(0, WS_EX_LAYERED);
 
 	return bCreated;
@@ -1059,7 +1063,7 @@ int CAutoCompleteWnd::MoveSelection(int nDelta)
 	return nCurSelItem;
 }
 
-void CAutoCompleteWnd::DoAutoCompletion()
+void CAutoCompleteWnd::DoAutoCompletion(int nEvent)
 {
 	AUTOCCOMPLETE info;
 	PrepareNotifyHeader((AUTOCNMHDR*)&info);
@@ -1067,6 +1071,7 @@ void CAutoCompleteWnd::DoAutoCompletion()
 	info.bDropRestOfWord = m_infoInit.bDropRestOfWord;
 	info.nItem = GetCurSel();
 	info.strText = m_listCtrl->GetItemText(info.nItem, 0);
+	info.eventFrom = (AUTOCCOMPLETE::Event)nEvent;
 	NotifyOwner(ACCmdComplete, (AUTOCNMHDR*)&info);
 	Close();
 }
@@ -1249,7 +1254,7 @@ void CAutoCompleteWnd::OnListDblClk(NMHDR* pNMHDR, LRESULT* pResult)
 	NMITEMACTIVATE* pItemActivate = (NMITEMACTIVATE*)pNMHDR;
 	if (pItemActivate->iItem >= 0)
 	{
-		DoAutoCompletion();
+		DoAutoCompletion(AUTOCCOMPLETE::EventDblClk);
 	}
 }
 
@@ -1521,8 +1526,10 @@ BOOL CAutoCompleteWnd::OnKey(UINT nKey)
 		MoveSelection(GetVisibleItems());
 		break;
 	case VK_TAB:
+		DoAutoCompletion(AUTOCCOMPLETE::EventTab);
+		break;
 	case VK_RETURN:
-		DoAutoCompletion();
+		DoAutoCompletion(AUTOCCOMPLETE::EventEnter);
 		break;
 	case VK_CONTROL:
 		return HandleKeyUpdateTransparency();
