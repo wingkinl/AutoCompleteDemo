@@ -332,7 +332,7 @@ public:
 
 	int MoveSelection(int nDelta);
 
-	void DoAutoCompletion(int nEvent);
+	BOOL DoAutoCompletion(int nEvent);
 
 	void SetImageList(CImageList* pImageList);
 

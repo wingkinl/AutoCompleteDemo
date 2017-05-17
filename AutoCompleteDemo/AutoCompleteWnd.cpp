@@ -971,16 +971,14 @@ BOOL CAutoCompleteWnd::Create(CWnd* pOwner, const AUTOCINITINFO& info)
 	}
 
 	UpdateListItemCount(info.nItemCount);
-	if (!info.bDummySelect)
-	{
-		int nNewSel = info.nPreSelectItem < info.nItemCount ? info.nPreSelectItem : 0;
-		//m_listCtrl->SetCurSel(nNewSel);
-		//m_listCtrl->EnsureVisible(nNewSel, FALSE);
-		// prevent the tooltip from immediately showing
-		m_bUpdateToolTipOnScroll = false;
-		MoveSelection(nNewSel);
-		m_bUpdateToolTipOnScroll = true;
-	}
+
+	int nNewSel = info.nPreSelectItem < info.nItemCount ? info.nPreSelectItem : 0;
+	//m_listCtrl->SetCurSel(nNewSel);
+	//m_listCtrl->EnsureVisible(nNewSel, FALSE);
+	// prevent the tooltip from immediately showing
+	m_bUpdateToolTipOnScroll = false;
+	MoveSelection(nNewSel);
+	m_bUpdateToolTipOnScroll = true;
 
 	ModifyStyleEx(0, WS_EX_LAYERED);
 
@@ -1063,17 +1061,37 @@ int CAutoCompleteWnd::MoveSelection(int nDelta)
 	return nCurSelItem;
 }
 
-void CAutoCompleteWnd::DoAutoCompletion(int nEvent)
+BOOL CAutoCompleteWnd::DoAutoCompletion(int nEvent)
 {
-	AUTOCCOMPLETE info;
-	PrepareNotifyHeader((AUTOCNMHDR*)&info);
-	info.nPosStartChar = m_infoInit.nPosStartChar;
-	info.bDropRestOfWord = m_infoInit.bDropRestOfWord;
-	info.nItem = GetCurSel();
-	info.strText = m_listCtrl->GetItemText(info.nItem, 0);
-	info.eventFrom = (AUTOCCOMPLETE::Event)nEvent;
-	NotifyOwner(ACCmdComplete, (AUTOCNMHDR*)&info);
+	int nCurSelItem = GetCurSel();
+	BOOL bComplete = TRUE;
+	if (m_infoInit.bDummySelect)
+	{
+		switch (nEvent)
+		{
+		case AUTOCCOMPLETE::EventEnter:
+			bComplete = FALSE;
+			break;
+		case AUTOCCOMPLETE::EventTab:
+			bComplete = m_infoInit.bCompleteDummySelOnTab;
+			break;
+		case AUTOCCOMPLETE::EventDblClk:
+			break;
+		}
+	}
+	if (bComplete)
+	{
+		AUTOCCOMPLETE info;
+		PrepareNotifyHeader((AUTOCNMHDR*)&info);
+		info.nPosStartChar = m_infoInit.nPosStartChar;
+		info.bDropRestOfWord = m_infoInit.bDropRestOfWord;
+		info.nItem = nCurSelItem;
+		info.strText = m_listCtrl->GetItemText(info.nItem, 0);
+		info.eventFrom = (AUTOCCOMPLETE::Event)nEvent;
+		NotifyOwner(ACCmdComplete, (AUTOCNMHDR*)&info);
+	}
 	Close();
+	return bComplete;
 }
 
 void CAutoCompleteWnd::SetImageList(CImageList* pImageList)
@@ -1119,6 +1137,7 @@ BOOL CAutoCompleteWnd::Activate(CWnd* pOwner, UINT /*nChar*/)
 
 	AUTOCINITINFO info = {0};
 	info.nMaxVisibleItems = AC_DEFAULT_MAX_VISIBLE_ITEM;
+	info.bCompleteDummySelOnTab = TRUE;
 	info.bDropRestOfWord = TRUE;
 	CAutoCTooltipCtrl::FillToolTipInfoWithDefault(info.stToolTipInfo);
 	if ( NotifyOwnerImpl(pOwner, ACCmdGetInitInfo, (AUTOCNMHDR*)&info) == 0 || info.nItemCount <= 0 )
@@ -1418,12 +1437,11 @@ void CAutoCompleteWnd::DrawItem(LPDRAWITEMSTRUCT pDIS)
 	int nRow = (int)pDIS->itemID;
 	CRect rect = pDIS->rcItem;
 	BOOL bSelected = nItemState & ODS_SELECTED;
+	// Background
 	COLORREF clrBkOrig = m_listCtrl->GetBkColor();
 	COLORREF clrBk = clrBkOrig;
-	if (bSelected)
+	if (bSelected && !m_infoInit.bDummySelect)
 		clrBk = GetSysColor(COLOR_MENUHILIGHT);
-
-	// Background
 	pDC->FillSolidRect(rect, clrBk);
 
 	if (m_szIcon.cx)
@@ -1488,8 +1506,16 @@ void CAutoCompleteWnd::DrawItemText(CDC* pDC, int nRow, UINT nState, CRect& rect
 		return;
 	}
 	BOOL bSelected = nState & ODS_SELECTED;
+	if (bSelected && m_infoInit.bDummySelect)
+	{
+		CBrush br(GetSysColor(COLOR_MENUHILIGHT));
+		CRect rectFrame = rect;
+		rectFrame.left -= g_szTextPadding.cx;
+		rectFrame.right -= 2;;
+		pDC->FrameRect(rectFrame, &br);
+	}
 	int nOldBKMode = pDC->SetBkMode(TRANSPARENT);
-	COLORREF clrText = bSelected ? GetSysColor(COLOR_HIGHLIGHTTEXT) : m_listCtrl->GetTextColor();
+	COLORREF clrText = (bSelected && !m_infoInit.bDummySelect) ? GetSysColor(COLOR_HIGHLIGHTTEXT) : m_listCtrl->GetTextColor();
 	auto clrOldText = pDC->SetTextColor(clrText);
 	
 	UINT nFormat = DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX | DT_VCENTER;
@@ -1514,23 +1540,25 @@ BOOL CAutoCompleteWnd::OnKey(UINT nKey)
 		Close();
 		break;
 	case VK_UP:
-		MoveSelection(-1);
-		break;
 	case VK_DOWN:
-		MoveSelection(1);
+		{
+			int nDelta = m_infoInit.bDummySelect ? 0 : (nKey == VK_UP ? -1 : 1);
+			m_infoInit.bDummySelect = FALSE;
+			MoveSelection(nDelta);
+		}
 		break;
 	case VK_PRIOR:
+		m_infoInit.bDummySelect = FALSE;
 		MoveSelection(-GetVisibleItems());
 		break;
 	case VK_NEXT:
+		m_infoInit.bDummySelect = FALSE;
 		MoveSelection(GetVisibleItems());
 		break;
 	case VK_TAB:
-		DoAutoCompletion(AUTOCCOMPLETE::EventTab);
-		break;
+		return DoAutoCompletion(AUTOCCOMPLETE::EventTab);
 	case VK_RETURN:
-		DoAutoCompletion(AUTOCCOMPLETE::EventEnter);
-		break;
+		return DoAutoCompletion(AUTOCCOMPLETE::EventEnter);
 	case VK_CONTROL:
 		return HandleKeyUpdateTransparency();
 	case VK_SHIFT:
@@ -1584,10 +1612,12 @@ BOOL CAutoCompleteWnd::NotifyKey(UINT nKey)
 		break;
 	}
 
+	int nCurSelItem = GetCurSel();
+
 	info.nPosStartChar = m_infoInit.nPosStartChar;
 	info.nStartLine = m_infoInit.nStartLine;
 	info.nItemCount = -1;
-	info.nPreSelectItem = GetCurSel();
+	info.nPreSelectItem = nCurSelItem;
 	info.bEatKey = FALSE;
 	info.bClose = TRUE;
 	NotifyOwner(ACCmdKey, (AUTOCNMHDR*)&info);
@@ -1597,7 +1627,7 @@ BOOL CAutoCompleteWnd::NotifyKey(UINT nKey)
 	}
 	else if (info.nItemCount > 0)
 	{
-		auto nOldSel = GetCurSel();
+		auto nOldSel = nCurSelItem;
 		UpdateListItemCount(info.nItemCount);
 		auto nNewSel = info.nPreSelectItem < info.nItemCount ? info.nPreSelectItem : GetTopIndex();
 		SetCurSel(nNewSel);
