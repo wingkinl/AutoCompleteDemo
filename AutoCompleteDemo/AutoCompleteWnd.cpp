@@ -964,8 +964,6 @@ protected:
 };
 #endif	//__NO_CToolTipCtrl_IMPL
 
-CAutoCTooltipCtrlImp obj;
-
 /************************************************************************/
 /* CAutoCompleteWnd
 /************************************************************************/
@@ -983,8 +981,11 @@ CAutoCompleteWnd::CAutoCompleteWnd()
 	m_nAlpha = 255;
 	m_bIncreaseAlpha = false;
 	m_nAlphaTimer = 0;
-
+#ifdef __NO_CToolTipCtrl_IMPL
+	m_pFont = nullptr;
+#else
 	m_pFont = &GetGlobalData()->fontTooltip;
+#endif // __NO_CToolTipCtrl_IMPL
 	m_nItemHeight = -1;
 
 	m_pInfoTipImp = nullptr;
