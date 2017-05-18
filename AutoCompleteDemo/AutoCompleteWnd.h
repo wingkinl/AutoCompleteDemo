@@ -27,8 +27,6 @@ struct AUTOCNMHDR
 	LPARAM	lp;
 };
 
-class CAutoCTooltipCtrl;
-
 typedef int		EditPosLen;
 
 struct AUTOCTOOLTIPINFO
@@ -215,7 +213,7 @@ protected:
 	{
 		if (m_bIsRichEdit)
 		{
-			long nStart, nEnd;
+			LONG nStart, nEnd;
 			((CRichEditCtrl*)m_pEdit)->GetSel(nStart, nEnd);
 			nStartChar = nStart; nEndChar = nEnd;
 		}
@@ -305,6 +303,31 @@ public:
 };
 #endif // _ENABLE_SCINTILLA_BUILD
 
+/************************************************************************/
+/* IAutoCInfoCtrlImp
+/************************************************************************/
+class IAutoCInfoCtrlImp
+{
+public:
+	IAutoCInfoCtrlImp()	{}
+	virtual ~IAutoCInfoCtrlImp() {}
+public:
+	virtual BOOL Create(CWnd* pParentWnd, const AUTOCINITINFO& info) = 0;
+	
+	virtual void Show(BOOL bShow = TRUE) = 0;
+
+	virtual void OnListSelChange(const AUTOCSELCHANGEINFO& info) {}
+
+	// milliseconds
+	virtual int GetInitialDelayTime() const	{return 500;}
+
+	virtual CWnd* GetWindow() const = 0;
+
+	// return TRUE to close the auto complete window
+	virtual BOOL ProcessMouseClick(UINT uiMsg, POINT pt, HWND hwnd) {return TRUE;}
+
+	HWND GetSafeHwnd() const {return this ? GetWindow()->GetSafeHwnd() : nullptr;}
+};
 
 // CAutoCompleteWnd
 class CAutoCompleteListCtrl;
@@ -339,6 +362,8 @@ public:
 	void Close() override;
 
 	CSize GetIconSize() const;
+
+	BOOL DrawItemIcon(CDC* pDC, int nRow, CRect rect);
 public:
 	static CAutoCompleteWnd*	GetActiveInstance();
 	static BOOL					Activate(CWnd* pOwner, UINT nChar);
@@ -365,7 +390,7 @@ protected:
 	BOOL ProcessMouseClick(UINT uiMsg, POINT pt, HWND hwnd) override;
 
 	void DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct);
-	BOOL DrawItemIcon(CDC* pDC, int nRow, CRect rect);
+	
 	void DrawItemText(CDC* pDC, int nRow, UINT nState, CRect& rect, BOOL bCalcOnly = FALSE);
 
 	BOOL HandleKeyUpdateTransparency();
@@ -374,6 +399,8 @@ protected:
 	void KillToolTipTimer();
 	void NotifySelChange(int nItem);
 	void ShowToolTip();
+
+	virtual IAutoCInfoCtrlImp* CreateToolTipCtrlImp() const;
 protected:
 	CAutoCompleteWnd();
 	virtual ~CAutoCompleteWnd();
@@ -392,10 +419,9 @@ protected:
 	CFont*						m_pFont;
 	int							m_nItemHeight;
 
-	friend class CAutoCTooltipCtrl;
-	CAutoCTooltipCtrl*			m_pToolTipCtrl;
-	UINT_PTR					m_nToolTipTimer;
-	bool						m_bUpdateToolTipOnScroll;
+	IAutoCInfoCtrlImp*			m_pInfoTipImp;
+	UINT_PTR					m_nInfolTipTimer;
+	bool						m_bUpdateInfolTipOnScroll;
 protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnSize(UINT nType, int cx, int cy);

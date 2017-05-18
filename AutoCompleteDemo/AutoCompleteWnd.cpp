@@ -33,6 +33,10 @@ SOFTWARE.
 #include "AutoCompleteWnd.h"
 #include "AutoCompleteListCtrl.h"
 
+#undef min
+#undef max
+#include <algorithm>
+
 #define AC_DEFAULT_MAX_VISIBLE_ITEM		10
 
 #define AC_MIN_ALPHA					30
@@ -42,7 +46,7 @@ SOFTWARE.
 
 #define AC_TIMER_TOOLTIP_ID				0x2000
 
-#define IDC_AUTO_LIST_CTRL		100
+#define IDC_AUTO_LIST_CTRL				100
 
 /************************************************************************/
 /* CWindowACImp
@@ -630,6 +634,7 @@ EditPosLen CScintillaACImp::GetLineEndPosition(int nLine) const
 }
 #endif // _ENABLE_SCINTILLA_BUILD
 
+#ifndef	__NO_CToolTipCtrl_IMPL
 /************************************************************************/
 /* CAutoCTooltipCtrl
 /************************************************************************/
@@ -659,7 +664,7 @@ protected:
 	afx_msg void OnShow(NMHDR* pNMHDR, LRESULT* pResult);
 	DECLARE_MESSAGE_MAP()
 protected:
-	friend class CAutoCompleteWnd;
+	friend class CAutoCTooltipCtrlImp;
 	int		m_nItem;
 	CString	m_strLabel;
 };
@@ -817,15 +822,15 @@ void CAutoCTooltipCtrl::OnShow(NMHDR* /*pNMHDR*/, LRESULT* pResult)
 
 	if (!m_Params.m_bDrawDescription || m_strDescription.IsEmpty())
 	{
-		cy = max(cy, m_sizeImage.cy);
+		cy = std::max(cy, (int)m_sizeImage.cy);
 	}
 	else
 	{
 		sizeDescr = OnDrawDescription(&dc, rectText, TRUE);
 
 		cy += sizeDescr.cy + 2 * m_ptMargin.y;
-		cx = max(cx, sizeDescr.cx);
-		cy = max(cy, m_sizeImage.cy);
+		cx = std::max(cx, (int)sizeDescr.cx);
+		cy = std::max(cy, (int)m_sizeImage.cy);
 	}
 
 	if (m_sizeImage.cx > 0 && m_Params.m_bDrawIcon)
@@ -839,7 +844,7 @@ void CAutoCTooltipCtrl::OnShow(NMHDR* /*pNMHDR*/, LRESULT* pResult)
 	const int nFixedWidth = GetFixedWidth();
 	if (nFixedWidth > 0 && sizeDescr != CSize(0, 0))
 	{
-		cx = max(cx, nFixedWidth);
+		cx = std::max(cx, nFixedWidth);
 	}
 
 	CPoint pt = CalcTrackPosition(cx, cy);
@@ -900,6 +905,67 @@ void CAutoCTooltipCtrl::OnMButtonDown(UINT nFlags, CPoint point)
 	Show(FALSE);
 }
 
+class CAutoCTooltipCtrlImp : public IAutoCInfoCtrlImp
+{
+public:
+	CAutoCTooltipCtrlImp()
+	{
+	}
+	~CAutoCTooltipCtrlImp()
+	{
+		if (m_ctrl.m_hWnd)
+		{
+			m_ctrl.Show(FALSE);
+			m_ctrl.DestroyWindow();
+		}
+	}
+public:
+	BOOL Create(CWnd* pParentWnd, const AUTOCINITINFO& info) override
+	{
+		return m_ctrl.Create(pParentWnd, TTS_ALWAYSTIP | TTS_NOPREFIX, info.stToolTipInfo);
+	}
+
+	void Show(BOOL bShow = TRUE) override
+	{
+		m_ctrl.Show(bShow);
+	}
+
+	void OnListSelChange(const AUTOCSELCHANGEINFO& info) override
+	{
+		m_ctrl.m_strLabel = info.strToolTipLabel;
+		m_ctrl.m_nItem = info.nItem;
+		m_ctrl.SetDescription(info.strToolTipDescription);
+	}
+
+
+	int GetInitialDelayTime() const override
+	{
+		return m_ctrl.GetDelayTime(TTDT_INITIAL);
+	}
+
+	CWnd* GetWindow() const override {return &const_cast<CAutoCTooltipCtrlImp*>(this)->m_ctrl;}
+
+	BOOL ProcessMouseClick(UINT uiMsg, POINT pt, HWND hwnd) override
+	{
+		if (m_ctrl.GetSafeHwnd())
+		{
+			CRect rectWindow;
+			m_ctrl.GetWindowRect(rectWindow);
+
+			if (rectWindow.PtInRect(pt))
+			{
+				return FALSE;
+			}
+		}
+		return TRUE;
+	}
+protected:
+	CAutoCTooltipCtrl	m_ctrl;
+};
+#endif	//__NO_CToolTipCtrl_IMPL
+
+CAutoCTooltipCtrlImp obj;
+
 /************************************************************************/
 /* CAutoCompleteWnd
 /************************************************************************/
@@ -921,9 +987,9 @@ CAutoCompleteWnd::CAutoCompleteWnd()
 	m_pFont = &GetGlobalData()->fontTooltip;
 	m_nItemHeight = -1;
 
-	m_pToolTipCtrl = nullptr;
-	m_nToolTipTimer = 0;
-	m_bUpdateToolTipOnScroll = true;
+	m_pInfoTipImp = nullptr;
+	m_nInfolTipTimer = 0;
+	m_bUpdateInfolTipOnScroll = true;
 
 	m_szIcon = CSize(0, 0);
 }
@@ -932,15 +998,16 @@ CAutoCompleteWnd::~CAutoCompleteWnd()
 {
 	ASSERT(GetActiveInstance());
 	s_pInstance = nullptr;
+	ASSERT(!m_pInfoTipImp);
 }
 
 BEGIN_MESSAGE_MAP(CAutoCompleteWnd, CAutoCompleteWndBase)
 	ON_WM_CREATE()
 	ON_WM_SIZE()
-	ON_NOTIFY(LVN_GETDISPINFO, IDC_AUTO_LIST_CTRL, &CAutoCompleteWnd::OnListGetDispInfo)
-	ON_NOTIFY(LVN_ITEMCHANGED, IDC_AUTO_LIST_CTRL, &CAutoCompleteWnd::OnListItemChange)
-	ON_NOTIFY(NM_DBLCLK, IDC_AUTO_LIST_CTRL, &CAutoCompleteWnd::OnListDblClk)
-	ON_NOTIFY(LVN_ENDSCROLL, IDC_AUTO_LIST_CTRL, &CAutoCompleteWnd::OnListEndScroll)
+	ON_NOTIFY(LVN_GETDISPINFO, IDC_AUTO_LIST_CTRL, OnListGetDispInfo)
+	ON_NOTIFY(LVN_ITEMCHANGED, IDC_AUTO_LIST_CTRL, OnListItemChange)
+	ON_NOTIFY(NM_DBLCLK, IDC_AUTO_LIST_CTRL, OnListDblClk)
+	ON_NOTIFY(LVN_ENDSCROLL, IDC_AUTO_LIST_CTRL, OnListEndScroll)
 	ON_WM_TIMER()
 	ON_WM_MEASUREITEM()
 	ON_WM_DRAWITEM()
@@ -966,23 +1033,33 @@ BOOL CAutoCompleteWnd::Create(CWnd* pOwner, const AUTOCINITINFO& info)
 
 	if (info.stToolTipInfo.m_bEnable)
 	{
-		m_pToolTipCtrl = new CAutoCTooltipCtrl;
-		VERIFY(m_pToolTipCtrl->Create(this, TTS_ALWAYSTIP | TTS_NOPREFIX, info.stToolTipInfo));
+		m_pInfoTipImp = CreateToolTipCtrlImp();
+		if (m_pInfoTipImp)
+		{
+			VERIFY(m_pInfoTipImp->Create(this, info));
+		}
 	}
 
 	UpdateListItemCount(info.nItemCount);
-
 	int nNewSel = info.nPreSelectItem < info.nItemCount ? info.nPreSelectItem : 0;
 	//m_listCtrl->SetCurSel(nNewSel);
 	//m_listCtrl->EnsureVisible(nNewSel, FALSE);
 	// prevent the tooltip from immediately showing
-	m_bUpdateToolTipOnScroll = false;
+	m_bUpdateInfolTipOnScroll = false;
 	MoveSelection(nNewSel);
-	m_bUpdateToolTipOnScroll = true;
-
+	m_bUpdateInfolTipOnScroll = true;
 	ModifyStyleEx(0, WS_EX_LAYERED);
 
 	return bCreated;
+}
+
+IAutoCInfoCtrlImp* CAutoCompleteWnd::CreateToolTipCtrlImp() const
+{
+#ifdef __NO_CToolTipCtrl_IMPL
+	return nullptr;
+#else
+	return new CAutoCTooltipCtrlImp;
+#endif // __NO_CToolTipCtrl_IMPL
 }
 
 void CAutoCompleteWnd::SetItemCount(int nItems)
@@ -1080,19 +1157,19 @@ BOOL CAutoCompleteWnd::DoAutoCompletion(int nEvent)
 		}
 	}
 	if (bComplete)
-	{
-		AUTOCCOMPLETE info;
-		PrepareNotifyHeader((AUTOCNMHDR*)&info);
-		info.nPosStartChar = m_infoInit.nPosStartChar;
-		info.bDropRestOfWord = m_infoInit.bDropRestOfWord;
+ 	{
+ 		AUTOCCOMPLETE info;
+ 		PrepareNotifyHeader((AUTOCNMHDR*)&info);
+ 		info.nPosStartChar = m_infoInit.nPosStartChar;
+ 		info.bDropRestOfWord = m_infoInit.bDropRestOfWord;
 		info.nItem = nCurSelItem;
-		info.strText = m_listCtrl->GetItemText(info.nItem, 0);
+ 		info.strText = m_listCtrl->GetItemText(info.nItem, 0);
 		info.eventFrom = (AUTOCCOMPLETE::Event)nEvent;
-		NotifyOwner(ACCmdComplete, (AUTOCNMHDR*)&info);
+ 		NotifyOwner(ACCmdComplete, (AUTOCNMHDR*)&info);
 	}
-	Close();
+ 	Close();
 	return bComplete;
-}
+ }
 
 void CAutoCompleteWnd::SetImageList(CImageList* pImageList)
 {
@@ -1139,7 +1216,9 @@ BOOL CAutoCompleteWnd::Activate(CWnd* pOwner, UINT /*nChar*/)
 	info.nMaxVisibleItems = AC_DEFAULT_MAX_VISIBLE_ITEM;
 	info.bCompleteDummySelOnTab = TRUE;
 	info.bDropRestOfWord = TRUE;
+	#ifndef	__NO_CToolTipCtrl_IMPL
 	CAutoCTooltipCtrl::FillToolTipInfoWithDefault(info.stToolTipInfo);
+	#endif
 	if ( NotifyOwnerImpl(pOwner, ACCmdGetInitInfo, (AUTOCNMHDR*)&info) == 0 || info.nItemCount <= 0 )
 		return FALSE;
 	CAutoCompleteWnd* pACWnd = new CAutoCompleteWnd;
@@ -1208,7 +1287,8 @@ int CAutoCompleteWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	BOOL bCreated = m_listCtrl->Create(dwStyle, rect, this, IDC_AUTO_LIST_CTRL);
 	if (!bCreated)
 		return 1;
-	m_listCtrl->SetFont(m_pFont);
+	if (m_pFont)
+		m_listCtrl->SetFont(m_pFont);
 	return 0;
 }
 
@@ -1279,9 +1359,9 @@ void CAutoCompleteWnd::OnListDblClk(NMHDR* pNMHDR, LRESULT* pResult)
 
 void CAutoCompleteWnd::OnListEndScroll(NMHDR* pNMHDR, LRESULT* pResult)
 {
-	if (m_bUpdateToolTipOnScroll && m_pToolTipCtrl->GetSafeHwnd())
+	if (m_bUpdateInfolTipOnScroll && m_pInfoTipImp->GetSafeHwnd())
 	{
-		m_pToolTipCtrl->Show();
+		m_pInfoTipImp->Show();
 	}
 }
 
@@ -1298,9 +1378,9 @@ BOOL CAutoCompleteWnd::HandleKeyUpdateTransparency()
 		m_nAlphaTimer = SetTimer(AC_TIMER_ALPHA_ID, AC_TIMER_ALPHA_ELAPSE, nullptr);
 		m_nAlpha -= AC_ALPHA_DELTA;
 		SetLayeredWindowAttributes(0, m_nAlpha, LWA_ALPHA);
-		if (m_pToolTipCtrl->GetSafeHwnd())
+		if (m_pInfoTipImp->GetSafeHwnd())
 		{
-			m_pToolTipCtrl->SetLayeredWindowAttributes(0, m_nAlpha, LWA_ALPHA);
+			m_pInfoTipImp->GetWindow()->SetLayeredWindowAttributes(0, m_nAlpha, LWA_ALPHA);
 		}
 	}
 	return FALSE;
@@ -1308,10 +1388,10 @@ BOOL CAutoCompleteWnd::HandleKeyUpdateTransparency()
 
 void CAutoCompleteWnd::KillToolTipTimer()
 {
-	if (m_nToolTipTimer)
+	if (m_nInfolTipTimer)
 	{
-		KillTimer(m_nToolTipTimer);
-		m_nToolTipTimer = 0;
+		KillTimer(m_nInfolTipTimer);
+		m_nInfolTipTimer = 0;
 	}
 }
 
@@ -1322,24 +1402,22 @@ void CAutoCompleteWnd::NotifySelChange(int nItem)
 	info.nItem = nItem;
 	GetItemRect(info.nItem, &info.rcItemScreen);
 	NotifyOwner(ACCmdSelChange, (AUTOCNMHDR*)&info);
-	if (m_pToolTipCtrl)
+	if (m_pInfoTipImp)
 	{
-		m_pToolTipCtrl->m_strLabel = info.strToolTipLabel;
-		m_pToolTipCtrl->m_nItem = info.nItem;
-		m_pToolTipCtrl->SetDescription(info.strToolTipDescription);
-		UINT nElapse = (UINT)m_pToolTipCtrl->GetDelayTime(TTDT_INITIAL);
-		m_nToolTipTimer = SetTimer(AC_TIMER_TOOLTIP_ID, nElapse, nullptr);
+		m_pInfoTipImp->OnListSelChange(info);
+		UINT nElapse = (UINT)m_pInfoTipImp->GetInitialDelayTime();
+		m_nInfolTipTimer = SetTimer(AC_TIMER_TOOLTIP_ID, nElapse, nullptr);
 	}
 }
 
 void CAutoCompleteWnd::ShowToolTip()
 {
-	if (!m_pToolTipCtrl)
+	if (!m_pInfoTipImp)
 	{
 		ASSERT(0);
 		return;
 	}
-	m_pToolTipCtrl->Show(TRUE);
+	m_pInfoTipImp->Show(TRUE);
 	KillToolTipTimer();
 }
 
@@ -1349,9 +1427,10 @@ void CAutoCompleteWnd::UpdateTransparency()
 	{
 		m_nAlpha += m_bIncreaseAlpha ? AC_ALPHA_DELTA : -AC_ALPHA_DELTA;
 		SetLayeredWindowAttributes(0, m_nAlpha, LWA_ALPHA);
-		if (m_pToolTipCtrl->GetSafeHwnd())
-			m_pToolTipCtrl->SetLayeredWindowAttributes(0, m_nAlpha, LWA_ALPHA);
+		if (m_pInfoTipImp->GetSafeHwnd())
+			m_pInfoTipImp->GetWindow()->SetLayeredWindowAttributes(0, m_nAlpha, LWA_ALPHA);
 	}
+	
 	if (m_bIncreaseAlpha ? (m_nAlpha == 255) : (m_nAlpha <= AC_MIN_ALPHA))
 	{
 		if (m_nAlphaTimer)
@@ -1415,16 +1494,10 @@ BOOL CAutoCompleteWnd::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
 void CAutoCompleteWnd::OnDestroy()
 {
 	KillToolTipTimer();
-	if (m_pToolTipCtrl)
+	if (m_pInfoTipImp)
 	{
-		ASSERT_VALID(m_pToolTipCtrl);
-		if (m_pToolTipCtrl->GetSafeHwnd())
-		{
-			m_pToolTipCtrl->Show(FALSE);
-			m_pToolTipCtrl->DestroyWindow();
-		}
-		delete m_pToolTipCtrl;
-		m_pToolTipCtrl = nullptr;
+		delete m_pInfoTipImp;
+		m_pInfoTipImp = nullptr;
 	}
 	CAutoCompleteWndBase::OnDestroy();
 }
@@ -1437,11 +1510,12 @@ void CAutoCompleteWnd::DrawItem(LPDRAWITEMSTRUCT pDIS)
 	int nRow = (int)pDIS->itemID;
 	CRect rect = pDIS->rcItem;
 	BOOL bSelected = nItemState & ODS_SELECTED;
-	// Background
 	COLORREF clrBkOrig = m_listCtrl->GetBkColor();
 	COLORREF clrBk = clrBkOrig;
 	if (bSelected && !m_infoInit.bDummySelect)
 		clrBk = GetSysColor(COLOR_MENUHILIGHT);
+
+	// Background
 	pDC->FillSolidRect(rect, clrBk);
 
 	if (m_szIcon.cx)
@@ -1555,9 +1629,9 @@ BOOL CAutoCompleteWnd::OnKey(UINT nKey)
 		m_infoInit.bDummySelect = FALSE;
 		MoveSelection(GetVisibleItems());
 		break;
-	case VK_TAB:
+ 	case VK_TAB:
 		return DoAutoCompletion(AUTOCCOMPLETE::EventTab);
-	case VK_RETURN:
+ 	case VK_RETURN:
 		return DoAutoCompletion(AUTOCCOMPLETE::EventEnter);
 	case VK_CONTROL:
 		return HandleKeyUpdateTransparency();
@@ -1596,7 +1670,9 @@ BOOL CAutoCompleteWnd::NotifyKey(UINT nKey)
 			BYTE lpKeyState[256];
 			::GetKeyboardState(lpKeyState);
 
+			#ifndef _OMAC_ERROR
 			::ToAsciiEx(nChar, MapVirtualKey(nChar, 0), lpKeyState, &wChar, 1, ::GetKeyboardLayout(AfxGetThread()->m_nThreadID));
+			#endif
 
 			info.nChar = (UINT)wChar;
 	#else
@@ -1611,9 +1687,7 @@ BOOL CAutoCompleteWnd::NotifyKey(UINT nKey)
 		}
 		break;
 	}
-
 	int nCurSelItem = GetCurSel();
-
 	info.nPosStartChar = m_infoInit.nPosStartChar;
 	info.nStartLine = m_infoInit.nStartLine;
 	info.nItemCount = -1;
@@ -1633,12 +1707,13 @@ BOOL CAutoCompleteWnd::NotifyKey(UINT nKey)
 		SetCurSel(nNewSel);
 		m_listCtrl->EnsureVisible(nNewSel, FALSE);
 
-		if (m_pToolTipCtrl)
-			m_pToolTipCtrl->Show(FALSE);
+		if (m_pInfoTipImp)
+			m_pInfoTipImp->Show(FALSE);
 
-		if (nOldSel == nNewSel && m_pToolTipCtrl->GetSafeHwnd())
+		if (nOldSel == nNewSel)
 		{
 			// although the indices are the same but they could be different item!
+			// Windows does not send LVN_ITEMCHANGED, so we need to make a fake one.
 			NotifySelChange(nNewSel);
 		}
 	}
@@ -1684,9 +1759,9 @@ void CAutoCompleteWnd::RecalcSizeToFitList()
 	int nItemCount = m_listCtrl->GetItemCount();
 	int nTopItemIndex = GetTopIndex();
 	//m_nMaxItemWidth = 0;
-	m_nVisibleItems = min(m_infoInit.nMaxVisibleItems, nItemCount);
+	m_nVisibleItems = std::min(m_infoInit.nMaxVisibleItems, nItemCount);
 	CClientDC dc(m_listCtrl);
-	auto pOldFont = dc.SelectObject(m_pFont);
+	auto pOldFont = m_pFont ? dc.SelectObject(m_pFont) : nullptr;
 	CRect rectClient;
 	GetClientRect(rectClient);
 	CRect rectLabel;
@@ -1695,9 +1770,10 @@ void CAutoCompleteWnd::RecalcSizeToFitList()
 		rectLabel = rectClient;
 		rectLabel.right = LONG_MAX;
 		DrawItemText(&dc, nItem, 0, rectLabel, TRUE);
-		m_nMaxItemWidth = max(m_nMaxItemWidth, rectLabel.right);
+		m_nMaxItemWidth = std::max(m_nMaxItemWidth, (int)rectLabel.right);
 	}
-	dc.SelectObject(pOldFont);
+	if (m_pFont)
+		dc.SelectObject(pOldFont);
 
 	int nVertSpacing = GetItemHeight();
 	CPoint posClient(0,0);
@@ -1735,10 +1811,11 @@ int CAutoCompleteWnd::GetItemHeight()
 	if (m_nItemHeight < 0)
 	{
 		CClientDC dc(this);
-		auto pOldFont = dc.SelectObject(m_pFont);
+		auto pOldFont = m_pFont ? dc.SelectObject(m_pFont) : nullptr;
 		TEXTMETRIC tm = { 0 };
 		dc.GetTextMetrics(&tm);
-		dc.SelectObject(pOldFont);
+		if (m_pFont)
+			dc.SelectObject(pOldFont);
 		m_nItemHeight = tm.tmHeight + g_szTextPadding.cy * 2;
 		int nIconHeight = m_szIcon.cy + g_szIconPadding.cy * 2;
 		if (nIconHeight > m_nItemHeight)
@@ -1751,17 +1828,8 @@ BOOL CAutoCompleteWnd::ProcessMouseClick(UINT uiMsg, POINT pt, HWND hwnd)
 {
 	if (!HitTest(pt))
 	{
-		if (m_pToolTipCtrl->GetSafeHwnd())
-		{
-			CRect rectWindow;
-			m_pToolTipCtrl->GetWindowRect(rectWindow);
-
-			if (rectWindow.PtInRect(pt) )
-			{
-				return FALSE;
-			}
-		}
-		Close();
+		if ( m_pInfoTipImp && m_pInfoTipImp->ProcessMouseClick(uiMsg, pt, hwnd) )
+			Close();
 	}
 	return FALSE;
 }
@@ -1786,3 +1854,4 @@ LRESULT CAutoCompleteWnd::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	return CAutoCompleteWndBase::WindowProc(message, wParam, lParam);
 }
+
