@@ -25,7 +25,8 @@ protected:
 	int HitTestSelectItem(const POINT& point);
 	void PostNcDestroy() override;
 protected:
-	BOOL	m_bShowVScroll;
+	friend class CAutoCompleteWnd;
+	BOOL	m_bDummySelect;
 protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg int OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message);

@@ -11,7 +11,7 @@ IMPLEMENT_DYNAMIC(CAutoCompleteListCtrl, CAutoCompleteListCtrlBase)
 
 CAutoCompleteListCtrl::CAutoCompleteListCtrl()
 {
-
+	m_bDummySelect = FALSE;
 }
 
 CAutoCompleteListCtrl::~CAutoCompleteListCtrl()
@@ -57,7 +57,10 @@ int CAutoCompleteListCtrl::HitTestSelectItem(const POINT& point)
 	// the popup
 	int nItem = HitTest(point);
 	if (nItem >= 0)
+	{
+		m_bDummySelect = FALSE;
 		SetCurSel(nItem);
+	}
 	return nItem;
 }
 

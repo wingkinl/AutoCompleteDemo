@@ -1142,7 +1142,7 @@ BOOL CAutoCompleteWnd::DoAutoCompletion(int nEvent)
 {
 	int nCurSelItem = GetCurSel();
 	BOOL bComplete = TRUE;
-	if (m_infoInit.bDummySelect)
+	if (m_listCtrl->m_bDummySelect)
 	{
 		switch (nEvent)
 		{
@@ -1275,6 +1275,7 @@ int CAutoCompleteWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		ASSERT(0);
 		return 1;
 	}
+	m_listCtrl->m_bDummySelect = m_infoInit.bDummySelect;
 	DWORD dwStyle = WS_CHILD | WS_VSCROLL | WS_VISIBLE | WS_BORDER;
 	dwStyle |= LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS;
 	// the image list should be reused
@@ -1512,7 +1513,7 @@ void CAutoCompleteWnd::DrawItem(LPDRAWITEMSTRUCT pDIS)
 	BOOL bSelected = nItemState & ODS_SELECTED;
 	COLORREF clrBkOrig = m_listCtrl->GetBkColor();
 	COLORREF clrBk = clrBkOrig;
-	if (bSelected && !m_infoInit.bDummySelect)
+	if (bSelected && !m_listCtrl->m_bDummySelect)
 		clrBk = GetSysColor(COLOR_MENUHILIGHT);
 
 	// Background
@@ -1580,7 +1581,7 @@ void CAutoCompleteWnd::DrawItemText(CDC* pDC, int nRow, UINT nState, CRect& rect
 		return;
 	}
 	BOOL bSelected = nState & ODS_SELECTED;
-	if (bSelected && m_infoInit.bDummySelect)
+	if (bSelected && m_listCtrl->m_bDummySelect)
 	{
 		CBrush br(GetSysColor(COLOR_MENUHILIGHT));
 		CRect rectFrame = rect;
@@ -1589,7 +1590,7 @@ void CAutoCompleteWnd::DrawItemText(CDC* pDC, int nRow, UINT nState, CRect& rect
 		pDC->FrameRect(rectFrame, &br);
 	}
 	int nOldBKMode = pDC->SetBkMode(TRANSPARENT);
-	COLORREF clrText = (bSelected && !m_infoInit.bDummySelect) ? GetSysColor(COLOR_HIGHLIGHTTEXT) : m_listCtrl->GetTextColor();
+	COLORREF clrText = (bSelected && !m_listCtrl->m_bDummySelect) ? GetSysColor(COLOR_HIGHLIGHTTEXT) : m_listCtrl->GetTextColor();
 	auto clrOldText = pDC->SetTextColor(clrText);
 	
 	UINT nFormat = DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX | DT_VCENTER;
@@ -1616,17 +1617,17 @@ BOOL CAutoCompleteWnd::OnKey(UINT nKey)
 	case VK_UP:
 	case VK_DOWN:
 		{
-			int nDelta = m_infoInit.bDummySelect ? 0 : (nKey == VK_UP ? -1 : 1);
-			m_infoInit.bDummySelect = FALSE;
+			int nDelta = m_listCtrl->m_bDummySelect ? 0 : (nKey == VK_UP ? -1 : 1);
+			m_listCtrl->m_bDummySelect = FALSE;
 			MoveSelection(nDelta);
 		}
 		break;
 	case VK_PRIOR:
-		m_infoInit.bDummySelect = FALSE;
+		m_listCtrl->m_bDummySelect = FALSE;
 		MoveSelection(-GetVisibleItems());
 		break;
 	case VK_NEXT:
-		m_infoInit.bDummySelect = FALSE;
+		m_listCtrl->m_bDummySelect = FALSE;
 		MoveSelection(GetVisibleItems());
 		break;
  	case VK_TAB:
