@@ -1829,7 +1829,7 @@ BOOL CAutoCompleteWnd::ProcessMouseClick(UINT uiMsg, POINT pt, HWND hwnd)
 {
 	if (!HitTest(pt))
 	{
-		if ( m_pInfoTipImp && m_pInfoTipImp->ProcessMouseClick(uiMsg, pt, hwnd) )
+		if ( !m_pInfoTipImp || m_pInfoTipImp->ProcessMouseClick(uiMsg, pt, hwnd) )
 			Close();
 	}
 	return FALSE;
