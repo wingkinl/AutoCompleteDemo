@@ -1457,7 +1457,7 @@ void CAutoCompleteWnd::OnTimer(UINT_PTR nIDEvent)
 }
 
 const CSize g_szTextPadding(4, 4);
-const CSize g_szIconPadding(4, 0);	// always vertically centered
+const CSize g_szIconPadding(4, 2);	// always vertically centered
 
 void CAutoCompleteWnd::OnMeasureItem(int nIDCtl, LPMEASUREITEMSTRUCT lpMeasureItemStruct)
 {
@@ -1560,7 +1560,9 @@ BOOL CAutoCompleteWnd::DrawItemIcon(CDC* pDC, int nRow, CRect rect)
 		{
 			CPoint pt = rect.TopLeft();
 			pt.y += (rect.Height() - m_szIcon.cy) / 2;
-			pDC->DrawIcon(pt, info.hIcon);
+			//pDC->DrawIcon(pt, info.hIcon);
+			DrawIconEx(pDC->GetSafeHdc(), pt.x, pt.y, info.hIcon, 
+				m_szIcon.cx, m_szIcon.cy, 0, NULL, DI_NORMAL);
 			if (info.hIcon)
 				DestroyIcon(info.hIcon);
 		}
