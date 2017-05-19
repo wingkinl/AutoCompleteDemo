@@ -947,7 +947,7 @@ public:
 
 	BOOL ProcessMouseClick(UINT uiMsg, POINT pt, HWND hwnd) override
 	{
-		if (m_ctrl.GetSafeHwnd())
+		if (m_ctrl.GetSafeHwnd() && m_ctrl.IsWindowVisible())
 		{
 			CRect rectWindow;
 			m_ctrl.GetWindowRect(rectWindow);
