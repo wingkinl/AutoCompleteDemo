@@ -404,7 +404,8 @@ BOOL CEditACImp::AutoComplete(AUTOCCOMPLETE* pInfo)
 		}
 	}
 	SetSel(pInfo->nPosStartChar, nEndCharPos, TRUE);
-	CString strText = GetCompleteText(pInfo->strText, pInfo->nItem);
+	int nMappedItem = GetMappedIndex(pInfo->nItem);
+	CString strText = GetCompleteText(pInfo->strText, nMappedItem);
 	ReplaceSel(strText);
 	return TRUE;
 }
@@ -552,7 +553,8 @@ BOOL CScintillaACImp::AutoComplete(AUTOCCOMPLETE* pInfo)
 		}
 	}
 	m_pEdit->SetSel(pInfo->nPosStartChar, nEndCharPos);
-	CString strText = GetCompleteText(pInfo->strText, pInfo->nItem);
+	int nMappedItem = GetMappedIndex(pInfo->nItem);
+	CString strText = GetCompleteText(pInfo->strText, nMappedItem);
 	m_pEdit->ReplaceSel(strText);
 	return TRUE;
 }
@@ -1167,7 +1169,7 @@ BOOL CAutoCompleteWnd::DoAutoCompletion(int nEvent)
  		info.nPosStartChar = m_infoInit.nPosStartChar;
  		info.bDropRestOfWord = m_infoInit.bDropRestOfWord;
 		info.nItem = nCurSelItem;
- 		info.strText = m_listCtrl->GetItemText(info.nItem, 0);
+ 		info.strText = m_listCtrl->GetItemText(nCurSelItem, 0);
 		info.eventFrom = (AUTOCCOMPLETE::Event)nEvent;
  		NotifyOwner(ACCmdComplete, (AUTOCNMHDR*)&info);
 	}
@@ -1410,7 +1412,7 @@ void CAutoCompleteWnd::NotifySelChange(int nItem)
 	AUTOCSELCHANGEINFO info = { 0 };
 	PrepareNotifyHeader((AUTOCNMHDR*)&info);
 	info.nItem = nItem;
-	GetItemRect(info.nItem, &info.rcItemScreen);
+	GetItemRect(nItem, &info.rcItemScreen);
 	NotifyOwner(ACCmdSelChange, (AUTOCNMHDR*)&info);
 	if (m_pInfoTipImp)
 	{

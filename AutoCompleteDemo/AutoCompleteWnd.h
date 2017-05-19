@@ -74,7 +74,7 @@ struct AUTOCDRAWICON
 {
 	AUTOCNMHDR	hdr;
 	HDC			hDC;
-	int			nItem;
+	int			nItem;		// index of the item in the list control
 	RECT		rect;
 	// the owner can finish drawing itself or return the icon for the
 	// window to draw it
@@ -90,7 +90,7 @@ struct AUTOCITEM
 		ACIF_IMAGE = 0x00000002,
 	};
 	UINT	mask;
-	int		nItem;
+	int		nItem;		// index of the item in the list control
 	int		nImage;
 	LPTSTR	pszText;
 	int		cchTextMax;
@@ -119,7 +119,7 @@ struct AUTOCKEYINFO
 struct AUTOCSELCHANGEINFO 
 {
 	AUTOCNMHDR	hdr;
-	int			nItem;
+	int			nItem;	// index of the item in the list control
 	RECT		rcItemScreen;
 	// these are applicable only when tooltip was enabled
 	CString		strToolTipLabel;
@@ -131,7 +131,7 @@ struct AUTOCCOMPLETE
 	AUTOCNMHDR	hdr;
 	EditPosLen	nPosStartChar;
 	BOOL		bDropRestOfWord;
-	int			nItem;
+	int			nItem;	// index of the item in the list control
 	CString		strText;
 	enum Event {
 		EventEnter,
