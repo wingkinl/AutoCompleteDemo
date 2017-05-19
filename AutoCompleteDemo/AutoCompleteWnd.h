@@ -14,6 +14,8 @@ enum ACCmd
 	ACCmdKey,
 	ACCmdComplete,
 	ACCmdDrawIcon,
+	ACCmdCreateListCtrl,
+	ACCmdCreateInfoTipImp,
 
 	ACCmdCustom			= 1024,
 };
@@ -336,7 +338,7 @@ typedef CSyncPopupWnd	CAutoCompleteWndBase;
 
 class ACWND_EXT_CLASS CAutoCompleteWnd : public CAutoCompleteWndBase
 {
-	DECLARE_DYNAMIC(CAutoCompleteWnd)
+	DECLARE_DYNCREATE(CAutoCompleteWnd)
 public:
 	BOOL Create(CWnd* pOwner, const AUTOCINITINFO& info);
 
@@ -366,8 +368,8 @@ public:
 	BOOL DrawItemIcon(CDC* pDC, int nRow, CRect rect);
 public:
 	static CAutoCompleteWnd*	GetActiveInstance();
-	static BOOL					Activate(CWnd* pOwner, UINT nChar);
-	static BOOL					Show(CWnd* pOwner);
+	static BOOL					Activate(CWnd* pOwner, UINT nChar, CRuntimeClass* pACWndClass = nullptr);
+	static BOOL					Show(CWnd* pOwner, CRuntimeClass* pACWndClass = nullptr);
 	static BOOL					Cancel();
 protected:
 	virtual CAutoCompleteListCtrl* CreateListCtrl();
@@ -400,7 +402,7 @@ protected:
 	void NotifySelChange(int nItem);
 	void ShowToolTip();
 
-	virtual IAutoCInfoCtrlImp* CreateToolTipCtrlImp() const;
+	virtual IAutoCInfoCtrlImp* CreateInfolTipCtrlImp() const;
 protected:
 	CAutoCompleteWnd();
 	virtual ~CAutoCompleteWnd();

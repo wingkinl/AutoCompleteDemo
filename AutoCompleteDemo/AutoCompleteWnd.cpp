@@ -968,7 +968,7 @@ protected:
 /* CAutoCompleteWnd
 /************************************************************************/
 
-IMPLEMENT_DYNAMIC(CAutoCompleteWnd, CAutoCompleteWndBase)
+IMPLEMENT_DYNCREATE(CAutoCompleteWnd, CAutoCompleteWndBase)
 
 CAutoCompleteWnd::CAutoCompleteWnd()
 {
@@ -1034,7 +1034,7 @@ BOOL CAutoCompleteWnd::Create(CWnd* pOwner, const AUTOCINITINFO& info)
 
 	if (info.stToolTipInfo.m_bEnable)
 	{
-		m_pInfoTipImp = CreateToolTipCtrlImp();
+		m_pInfoTipImp = CreateInfolTipCtrlImp();
 		if (m_pInfoTipImp)
 		{
 			VERIFY(m_pInfoTipImp->Create(this, info));
@@ -1054,8 +1054,11 @@ BOOL CAutoCompleteWnd::Create(CWnd* pOwner, const AUTOCINITINFO& info)
 	return bCreated;
 }
 
-IAutoCInfoCtrlImp* CAutoCompleteWnd::CreateToolTipCtrlImp() const
+IAutoCInfoCtrlImp* CAutoCompleteWnd::CreateInfolTipCtrlImp() const
 {
+	IAutoCInfoCtrlImp* pInfoTipImp = (IAutoCInfoCtrlImp*)NotifyOwner(ACCmdCreateInfoTipImp, nullptr);
+	if (pInfoTipImp)
+		return pInfoTipImp;
 #ifdef __NO_CToolTipCtrl_IMPL
 	return nullptr;
 #else
@@ -1199,7 +1202,7 @@ BOOL CAutoCompleteWnd::IsActiveOwner(CWnd* pWnd)
 }
 
 // this current implementation does not need nChar for now
-BOOL CAutoCompleteWnd::Activate(CWnd* pOwner, UINT /*nChar*/)
+BOOL CAutoCompleteWnd::Activate(CWnd* pOwner, UINT /*nChar*/, CRuntimeClass* pACWndClass)
 {
 	if ( GetActiveInstance() )
 	{
@@ -1222,14 +1225,16 @@ BOOL CAutoCompleteWnd::Activate(CWnd* pOwner, UINT /*nChar*/)
 	#endif
 	if ( NotifyOwnerImpl(pOwner, ACCmdGetInitInfo, (AUTOCNMHDR*)&info) == 0 || info.nItemCount <= 0 )
 		return FALSE;
-	CAutoCompleteWnd* pACWnd = new CAutoCompleteWnd;
-	BOOL bCreated = pACWnd->Create(pOwner, info);
+	if (!pACWndClass)
+		pACWndClass = RUNTIME_CLASS(CAutoCompleteWnd);
+	CAutoCompleteWnd* pACWnd = DYNAMIC_DOWNCAST(CAutoCompleteWnd, pACWndClass->CreateObject());
+	BOOL bCreated = pACWnd && pACWnd->Create(pOwner, info);
 	return bCreated;
 }
 
-BOOL CAutoCompleteWnd::Show(CWnd* pOwner)
+BOOL CAutoCompleteWnd::Show(CWnd* pOwner, CRuntimeClass* pACWndClass)
 {
-	return Activate(pOwner, (UINT)-1);
+	return Activate(pOwner, (UINT)-1, pACWndClass);
 }
 
 BOOL CAutoCompleteWnd::Cancel()
@@ -1256,6 +1261,9 @@ LRESULT CAutoCompleteWnd::NotifyOwnerImpl(CWnd* pWndOwner, ACCmd cmd, AUTOCNMHDR
 
 CAutoCompleteListCtrl* CAutoCompleteWnd::CreateListCtrl()
 {
+	CAutoCompleteListCtrl* pListCtrl = (CAutoCompleteListCtrl*)NotifyOwner(ACCmdCreateListCtrl, nullptr);
+	if (pListCtrl)
+		return pListCtrl;
 	return new CAutoCompleteListCtrl;
 }
 
