@@ -851,6 +851,8 @@ void CAutoCTooltipCtrl::OnShow(NMHDR* /*pNMHDR*/, LRESULT* pResult)
 
 	CPoint pt = CalcTrackPosition(cx, cy);
 
+	// to indicate we don't want to display at default location
+	*pResult = 1;
 	SetWindowPos(NULL, pt.x, pt.y, cx, cy, SWP_NOZORDER | SWP_NOACTIVATE);
 
 #if _MSC_VER >= 1900
@@ -1371,6 +1373,7 @@ void CAutoCompleteWnd::OnListDblClk(NMHDR* pNMHDR, LRESULT* pResult)
 
 void CAutoCompleteWnd::OnListEndScroll(NMHDR* pNMHDR, LRESULT* pResult)
 {
+	RecalcSizeToFitList();
 	if (m_bUpdateInfolTipOnScroll && m_pInfoTipImp->GetSafeHwnd())
 	{
 		m_pInfoTipImp->Show();
@@ -1779,6 +1782,8 @@ void CAutoCompleteWnd::RecalcSizeToFitList()
 	CRect rectClient;
 	GetClientRect(rectClient);
 	CRect rectLabel;
+	if (m_infoInit.bKeepOptimizedWndSize)
+		m_nMaxItemWidth = 0;
 	for (int nItem = nTopItemIndex; nItem < nTopItemIndex + m_nVisibleItems; ++nItem)
 	{
 		rectLabel = rectClient;

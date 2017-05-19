@@ -64,6 +64,7 @@ struct AUTOCINITINFO
 	BOOL		bDummySelect;	// hitting enter key won't complete on the selected item
 	BOOL		bCompleteDummySelOnTab;	// tab key should do completion even when dummy select 
 	BOOL		bDropRestOfWord;
+	BOOL		bKeepOptimizedWndSize;	// always shown as smallest as possible
 	HFONT		hFont;			// the font for drawing list items
 	CImageList*	pImageList;		// the image list for displaying icon
 	SIZE		szIcons;		// used only when non-zero values returned AND pImageList is NULL
