@@ -354,7 +354,7 @@ public:
 	int GetCurSel() const;
 	void SetCurSel(int nItem);
 
-	BOOL GetItemRect(int nItem, LPRECT rect);
+	BOOL GetItemRect(int nItem, LPRECT rect) const;
 
 	int MoveSelection(int nDelta);
 
@@ -367,6 +367,8 @@ public:
 	CSize GetIconSize() const;
 
 	BOOL DrawItemIcon(CDC* pDC, int nRow, CRect rect);
+
+	CPoint CalcInfoWindowPos(int nItem, int cx, int cy) const;
 public:
 	static CAutoCompleteWnd*	GetActiveInstance();
 	static BOOL					Activate(CWnd* pOwner, UINT nChar, CRuntimeClass* pACWndClass = nullptr);

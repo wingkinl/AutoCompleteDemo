@@ -646,7 +646,7 @@ public:
 	CAutoCTooltipCtrl();
 	~CAutoCTooltipCtrl();
 public:
-	BOOL Create(CWnd* pParentWnd, _In_ DWORD dwStyle, const AUTOCTOOLTIPINFO& tti);
+	BOOL Create(CWnd* pParentWnd, DWORD dwStyle, const AUTOCTOOLTIPINFO& tti);
 
 	static void FillToolTipInfoWithDefault(AUTOCTOOLTIPINFO& tti);
 
@@ -689,7 +689,7 @@ BEGIN_MESSAGE_MAP(CAutoCTooltipCtrl, CMFCToolTipCtrl)
 	ON_NOTIFY_REFLECT(TTN_SHOW, &OnShow)
 END_MESSAGE_MAP()
 
-BOOL CAutoCTooltipCtrl::Create(CWnd* pParentWnd, _In_ DWORD dwStyle, const AUTOCTOOLTIPINFO& tti)
+BOOL CAutoCTooltipCtrl::Create(CWnd* pParentWnd, DWORD dwStyle, const AUTOCTOOLTIPINFO& tti)
 {
 	BOOL bRet = CMFCToolTipCtrl::Create(pParentWnd, dwStyle);
 	if (!bRet)
@@ -760,32 +760,7 @@ CPoint CAutoCTooltipCtrl::CalcTrackPosition(int cx, int cy)
 {
 	CWnd* pWndOwner = GetOwner();
 	CAutoCompleteWnd* pACWnd = (CAutoCompleteWnd*)pWndOwner;
-	CRect rectWindow;
-	pACWnd->GetItemRect(m_nItem, &rectWindow);
-	CRect rectOwner;
-	pACWnd->GetWindowRect(rectOwner);
-	if (rectWindow.top < rectOwner.top)
-		rectWindow.top = rectOwner.top;
-	else if (rectWindow.top > rectOwner.bottom)
-		rectWindow.top = rectOwner.bottom;
-
-	CPoint pt(rectWindow.right, rectWindow.top);
-
-	CRect rectScreen;
-
-	MONITORINFO mi;
-	mi.cbSize = sizeof(MONITORINFO);
-	if (GetMonitorInfo(MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST), &mi))
-	{
-		rectScreen = mi.rcWork;
-	}
-	else
-	{
-		::SystemParametersInfo(SPI_GETWORKAREA, 0, &rectScreen, 0);
-	}
-	if (pt.x + cx > rectScreen.right)
-		pt.x = rectOwner.left - cx;
-	return pt;
+	return pACWnd->CalcInfoWindowPos(m_nItem, cx, cy);
 }
 
 void CAutoCTooltipCtrl::OnShow(NMHDR* /*pNMHDR*/, LRESULT* pResult)
@@ -1115,7 +1090,7 @@ void CAutoCompleteWnd::SetCurSel(int nItem)
 		m_listCtrl->SetCurSel(nItem);
 }
 
-BOOL CAutoCompleteWnd::GetItemRect(int nItem, LPRECT rect)
+BOOL CAutoCompleteWnd::GetItemRect(int nItem, LPRECT rect) const
 {
 	if (!m_listCtrl)
 		return FALSE;
@@ -1246,6 +1221,36 @@ BOOL CAutoCompleteWnd::Cancel()
 	if (GetActiveInstance())
 		GetActiveInstance()->Close();
 	return TRUE;
+}
+
+CPoint CAutoCompleteWnd::CalcInfoWindowPos(int nItem, int cx, int cy) const
+{
+	CRect rectWindow;
+	GetItemRect(nItem, &rectWindow);
+	CRect rectOwner;
+	GetWindowRect(rectOwner);
+	if (rectWindow.top < rectOwner.top)
+		rectWindow.top = rectOwner.top;
+	else if (rectWindow.top > rectOwner.bottom)
+		rectWindow.top = rectOwner.bottom;
+
+	CPoint pt(rectWindow.right, rectWindow.top);
+
+	CRect rectScreen;
+
+	MONITORINFO mi;
+	mi.cbSize = sizeof(MONITORINFO);
+	if (GetMonitorInfo(MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST), &mi))
+	{
+		rectScreen = mi.rcWork;
+	}
+	else
+	{
+		::SystemParametersInfo(SPI_GETWORKAREA, 0, &rectScreen, 0);
+	}
+	if (pt.x + cx > rectScreen.right)
+		pt.x = rectOwner.left - cx;
+	return pt;
 }
 
 LRESULT CAutoCompleteWnd::NotifyOwner(ACCmd cmd, AUTOCNMHDR* pHdr) const
