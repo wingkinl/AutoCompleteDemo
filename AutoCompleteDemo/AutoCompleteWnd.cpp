@@ -1250,6 +1250,8 @@ CPoint CAutoCompleteWnd::CalcInfoWindowPos(int nItem, int cx, int cy) const
 	}
 	if (pt.x + cx > rectScreen.right)
 		pt.x = rectOwner.left - cx;
+	if (pt.y + cy > rectScreen.bottom)
+		pt.y = rectScreen.bottom - cy;
 	return pt;
 }
 
