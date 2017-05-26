@@ -55,6 +55,7 @@ CWindowACImp::CWindowACImp()
 {
 	m_bMatchCase = false;
 	m_bFuzzyMatch = true;
+	m_bMatchFromBeginning = true;
 	m_bAllowCaretMove = true;
 	m_bUpdateListAfterCaretMove = false;
 }
@@ -251,15 +252,30 @@ int CWindowACImp::UpdateFilteredList(LPCTSTR pszFilterText, int& nPreSelIndex)
 		if (m_bFuzzyMatch)
 		{
 			LPCTSTR pszTextMatch = pszItemText;
-			auto pfnStrChr = m_bMatchCase ? StrChr : StrChrI;
-			for (int nChar = 0; nChar < nTextLen; ++nChar)
+			int nCharPos = 0;
+			if (m_bMatchFromBeginning)
 			{
-				pszTextMatch = pfnStrChr(pszTextMatch, pszFilterText[nChar]);
+				bMatch = m_bMatchCase ? (pszTextMatch[0] == pszFilterText[0]) : (_totupper(pszTextMatch[0]) == _totupper(pszFilterText[0]));
+				if (bMatch)
+				{
+					++nCharPos;
+					++pszTextMatch;
+				}
+				else
+				{
+					nCharPos = nTextLen;
+					pszTextMatch = nullptr;
+				}
+			}
+			auto pfnStrChr = m_bMatchCase ? StrChr : StrChrI;
+			for (; nCharPos < nTextLen; ++nCharPos)
+			{
+				pszTextMatch = pfnStrChr(pszTextMatch, pszFilterText[nCharPos]);
 				if (!pszTextMatch)
 					break;
 				if (*++pszTextMatch == _T('\0'))
 				{
-					if (nChar != nTextLen - 1)
+					if (nCharPos != nTextLen - 1)
 						pszTextMatch = nullptr;
 					break;
 				}

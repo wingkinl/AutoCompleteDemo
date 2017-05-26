@@ -185,6 +185,7 @@ protected:
 public:
 	bool			m_bMatchCase;
 	bool			m_bFuzzyMatch;
+	bool			m_bMatchFromBeginning;
 	bool			m_bAllowCaretMove;	// caret move won't close the window
 	bool			m_bUpdateListAfterCaretMove;
 };
