@@ -19,8 +19,6 @@ public:
 	
 	int GetCurSel() const;
 	void SetCurSel(int nItem);
-
-	BOOL IsShowVScrollBar() const;
 protected:
 	int HitTestSelectItem(const POINT& point);
 	void PostNcDestroy() override;

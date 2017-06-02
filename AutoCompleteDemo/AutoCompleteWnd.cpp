@@ -1821,7 +1821,7 @@ void CAutoCompleteWnd::RecalcSizeToFitList()
 	CPoint posClient(0,0);
 	CSize szClient;
 	szClient.cx = m_nMaxItemWidth;
-	if (m_listCtrl->IsShowVScrollBar())
+	if (m_nVisibleItems < nItemCount)
 		szClient.cx += GetSystemMetrics(SM_CXVSCROLL);
 	szClient.cy = nVertSpacing * m_nVisibleItems;
 	UINT nFlags = SWP_NOACTIVATE;

@@ -46,11 +46,6 @@ void CAutoCompleteListCtrl::SetCurSel(int nItem)
 	SetItemState(nItem, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
 }
 
-BOOL CAutoCompleteListCtrl::IsShowVScrollBar() const
-{
-	return (GetStyle() & WS_VSCROLL);
-}
-
 int CAutoCompleteListCtrl::HitTestSelectItem(const POINT& point)
 {
 	// We must take control of selection to prevent this window activating
