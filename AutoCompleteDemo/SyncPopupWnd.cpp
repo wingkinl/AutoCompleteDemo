@@ -60,8 +60,7 @@ BOOL CSyncPopupWnd::Create(CWnd* pOwner, POINT pos)
 BOOL CSyncPopupWnd::HitTest(const POINT& ptScreen) const
 {
 	CRect rectWindow;
-	GetClientRect(rectWindow);
-	ClientToScreen(rectWindow);
+	GetWindowRect(rectWindow);
 
 	if (!rectWindow.PtInRect(ptScreen))
 	{
